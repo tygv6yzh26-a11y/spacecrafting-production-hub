@@ -72,7 +72,7 @@ export function useCreateJob() {
   return useMutation({
     mutationFn: async (job: JobInsert) => {
       const { data: u } = await supabase.auth.getUser();
-      const { data, error } = await supabase.from("jobs").insert({ ...job, created_by: u.user?.id }).select().single();
+      const { data, error } = await supabase.from("jobs").insert({ ...job, created_by: u.user?.id ?? null }).select().single();
       if (error) throw error;
       return data;
     },
@@ -106,6 +106,6 @@ export const todayISO = () => {
 
 export function formatDate(iso: string | null | undefined) {
   if (!iso) return "—";
-  const [y, m, d] = iso.split("-").map(Number);
+  const [y = 0, m = 1, d = 1] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
 }

@@ -12,7 +12,7 @@ async function fetchMe(): Promise<Me | null> {
   return {
     id: u.user.id,
     email: u.user.email ?? "",
-    name: (u.user.user_metadata?.full_name as string) ?? u.user.email ?? "",
+    name: (u.user.user_metadata?.['full_name'] as string) ?? u.user.email ?? "",
     roles: roles.map((r) => r.role as Role),
   };
 }

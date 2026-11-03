@@ -48,12 +48,12 @@ function Team() {
   if (!isAdmin(me)) return <p className="text-sm text-muted-foreground">Only admins can manage team access.</p>;
 
   async function setRole(userId: string, role: string) {
-    if (userId === me!.id && role !== "admin") return toast.error("You can't remove your own admin access.");
+    if (userId === me!.id && role !== "admin") { toast.error("You can't remove your own admin access."); return; }
     const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId);
-    if (delErr) return toast.error(delErr.message);
+    if (delErr) { toast.error(delErr.message); return; }
     if (role !== "none") {
       const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: role as Role });
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
     }
     toast.success("Access updated");
     qc.invalidateQueries({ queryKey: ["team"] });
@@ -63,14 +63,14 @@ function Team() {
     e.preventDefault();
     if (!newEditor.trim()) return;
     const { error } = await supabase.from("editors").insert({ name: newEditor.trim() });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setNewEditor("");
     qc.invalidateQueries({ queryKey: ["editors"] });
   }
 
   async function toggleEditor(id: string, active: boolean) {
     const { error } = await supabase.from("editors").update({ active }).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["editors"] });
   }
 

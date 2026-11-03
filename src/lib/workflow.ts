@@ -114,7 +114,7 @@ export function toISODate(d: Date): string {
 }
 
 export function addDays(iso: string, days: number): string {
-  const [y, m, d] = iso.split("-").map(Number);
+  const [y = 0, m = 1, d = 1] = iso.split("-").map(Number);
   return toISODate(new Date(y, m - 1, d + days));
 }
 
@@ -132,7 +132,7 @@ export function parseDeliveryDate(text: string | null | undefined, shootISO?: st
   const t = text ?? "";
   const matches = [...t.matchAll(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g)];
   if (matches.length) {
-    const [, m, d, yRaw] = matches[matches.length - 1];
+    const [, m = "1", d = "1", yRaw = "2026"] = matches[matches.length - 1]!;
     const y = yRaw.length === 2 ? 2000 + Number(yRaw) : Number(yRaw);
     return toISODate(new Date(y, Number(m) - 1, Number(d)));
   }

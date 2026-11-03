@@ -65,7 +65,7 @@ function ImportPage() {
       const { data: u } = await supabase.auth.getUser();
       const batch = 200;
       for (let i = 0; i < fresh.length; i += batch) {
-        const chunk = fresh.slice(i, i + batch).map((j) => ({ ...j, created_by: u.user?.id }));
+        const chunk = fresh.slice(i, i + batch).map((j) => ({ ...j, created_by: u.user?.id ?? null }));
         const { data, error } = await supabase.from("jobs").upsert(chunk, { onConflict: "import_key", ignoreDuplicates: true }).select("id");
         if (error) {
           res.failed += chunk.length;
