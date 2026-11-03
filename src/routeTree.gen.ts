@@ -13,11 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticated/delivery'
 import { Route as AuthenticatedEditingRouteImport } from './routes/_authenticated/editing'
 import { Route as AuthenticatedJobsRouteImport } from './routes/_authenticated/jobs'
 import { Route as AuthenticatedQcRouteImport } from './routes/_authenticated/qc'
 import { Route as AuthenticatedRevisionsRouteImport } from './routes/_authenticated/revisions'
+import { Route as AuthenticatedWorkloadRouteImport } from './routes/_authenticated/workload'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -37,6 +39,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDeliveryRoute = AuthenticatedDeliveryRouteImport.update({
   id: '/delivery',
@@ -63,26 +70,35 @@ const AuthenticatedRevisionsRoute = AuthenticatedRevisionsRouteImport.update({
   path: '/revisions',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedWorkloadRoute = AuthenticatedWorkloadRouteImport.update({
+  id: '/workload',
+  path: '/workload',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/editing': typeof AuthenticatedEditingRoute
   '/jobs': typeof AuthenticatedJobsRoute
   '/qc': typeof AuthenticatedQcRoute
   '/revisions': typeof AuthenticatedRevisionsRoute
+  '/workload': typeof AuthenticatedWorkloadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/editing': typeof AuthenticatedEditingRoute
   '/jobs': typeof AuthenticatedJobsRoute
   '/qc': typeof AuthenticatedQcRoute
   '/revisions': typeof AuthenticatedRevisionsRoute
+  '/workload': typeof AuthenticatedWorkloadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -90,11 +106,13 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/delivery': typeof AuthenticatedDeliveryRoute
   '/_authenticated/editing': typeof AuthenticatedEditingRoute
   '/_authenticated/jobs': typeof AuthenticatedJobsRoute
   '/_authenticated/qc': typeof AuthenticatedQcRoute
   '/_authenticated/revisions': typeof AuthenticatedRevisionsRoute
+  '/_authenticated/workload': typeof AuthenticatedWorkloadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -102,32 +120,38 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/dashboard'
     | '/delivery'
     | '/editing'
     | '/jobs'
     | '/qc'
     | '/revisions'
+    | '/workload'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/dashboard'
     | '/delivery'
     | '/editing'
     | '/jobs'
     | '/qc'
     | '/revisions'
+    | '/workload'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/_authenticated/dashboard'
     | '/_authenticated/delivery'
     | '/_authenticated/editing'
     | '/_authenticated/jobs'
     | '/_authenticated/qc'
     | '/_authenticated/revisions'
+    | '/_authenticated/workload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -167,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/delivery': {
       id: '/_authenticated/delivery'
       path: '/delivery'
@@ -202,23 +233,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRevisionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/workload': {
+      id: '/_authenticated/workload'
+      path: '/workload'
+      fullPath: '/workload'
+      preLoaderRoute: typeof AuthenticatedWorkloadRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDeliveryRoute: typeof AuthenticatedDeliveryRoute
   AuthenticatedEditingRoute: typeof AuthenticatedEditingRoute
   AuthenticatedJobsRoute: typeof AuthenticatedJobsRoute
   AuthenticatedQcRoute: typeof AuthenticatedQcRoute
   AuthenticatedRevisionsRoute: typeof AuthenticatedRevisionsRoute
+  AuthenticatedWorkloadRoute: typeof AuthenticatedWorkloadRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDeliveryRoute: AuthenticatedDeliveryRoute,
   AuthenticatedEditingRoute: AuthenticatedEditingRoute,
   AuthenticatedJobsRoute: AuthenticatedJobsRoute,
   AuthenticatedQcRoute: AuthenticatedQcRoute,
   AuthenticatedRevisionsRoute: AuthenticatedRevisionsRoute,
+  AuthenticatedWorkloadRoute: AuthenticatedWorkloadRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
