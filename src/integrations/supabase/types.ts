@@ -14,16 +14,212 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          assets_link: string | null
+          branding_notes: string | null
+          category: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_top_agent: boolean
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          assets_link?: string | null
+          branding_notes?: string | null
+          category?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_top_agent?: boolean
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          assets_link?: string | null
+          branding_notes?: string | null
+          category?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_top_agent?: boolean
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      editors: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      jobs: {
+        Row: {
+          address: string | null
+          address_url: string | null
+          calendar_url: string | null
+          category: string | null
+          client: string | null
+          created_at: string
+          created_by: string | null
+          deliverable_links: string | null
+          delivered_at: string | null
+          delivery_text: string | null
+          department: string
+          due_date: string | null
+          editor: string | null
+          id: string
+          import_key: string | null
+          notes: string | null
+          order_number: string | null
+          photographer: string | null
+          project_name: string | null
+          sheet_month: string | null
+          shoot_date: string | null
+          shoot_date_text: string | null
+          source_row: number | null
+          source_sheet: string | null
+          staff_assigned: string | null
+          status: string
+          status_updated_at: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          address_url?: string | null
+          calendar_url?: string | null
+          category?: string | null
+          client?: string | null
+          created_at?: string
+          created_by?: string | null
+          deliverable_links?: string | null
+          delivered_at?: string | null
+          delivery_text?: string | null
+          department?: string
+          due_date?: string | null
+          editor?: string | null
+          id?: string
+          import_key?: string | null
+          notes?: string | null
+          order_number?: string | null
+          photographer?: string | null
+          project_name?: string | null
+          sheet_month?: string | null
+          shoot_date?: string | null
+          shoot_date_text?: string | null
+          source_row?: number | null
+          source_sheet?: string | null
+          staff_assigned?: string | null
+          status?: string
+          status_updated_at?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          address_url?: string | null
+          calendar_url?: string | null
+          category?: string | null
+          client?: string | null
+          created_at?: string
+          created_by?: string | null
+          deliverable_links?: string | null
+          delivered_at?: string | null
+          delivery_text?: string | null
+          department?: string
+          due_date?: string | null
+          editor?: string | null
+          id?: string
+          import_key?: string | null
+          notes?: string | null
+          order_number?: string | null
+          photographer?: string | null
+          project_name?: string | null
+          sheet_month?: string | null
+          shoot_date?: string | null
+          shoot_date_text?: string | null
+          source_row?: number | null
+          source_sheet?: string | null
+          staff_assigned?: string | null
+          status?: string
+          status_updated_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_manage: { Args: { _user_id: string }; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_team_member: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "producer" | "editor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +346,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "producer", "editor"],
+    },
   },
 } as const
