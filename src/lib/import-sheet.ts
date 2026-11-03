@@ -78,7 +78,7 @@ function hyperlink(cell: XLSX.CellObject | undefined): { text: string | null; ur
   const f = cell.f ?? "";
   const m = f.match(/HYPERLINK\(\s*"([^"]+)"\s*,\s*"([^"]*)"/i);
   if (m) {
-    url = m[1];
+    url = m[1] ?? null;
     return { text: clean(cell.v) ?? clean(m[2]), url };
   }
   if (cell.t === "d" && cell.v instanceof Date) return { text: toISODate(cell.v), url };
@@ -94,7 +94,7 @@ function parseDateText(text: string | null, cell?: XLSX.CellObject): string | nu
   if (!text) return null;
   const m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
   if (m) {
-    const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+    const y = (m[3] ?? "").length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
     return toISODate(new Date(y, Number(m[1]) - 1, Number(m[2])));
   }
   const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -217,11 +217,11 @@ export function parseWorkbook(data: ArrayBuffer): ParsedWorkbook {
     let department: string | null = null;
     let month: string | null = null;
     if (m) {
-      if (m[3] !== "2026" || !MONTHS.includes(m[2])) {
+      if (m[3] !== "2026" || !MONTHS.includes(m[2] ?? "")) {
         skippedSheets.push(name);
         continue;
       }
-      department = m[1];
+      department = m[1] ?? "VE";
       month = `${m[2]} ${m[3]}`;
     } else if (trimmed === "Social Cut Projects") department = "Social";
     else if (trimmed === "Ongoing Projects") department = "Ongoing";
@@ -229,8 +229,8 @@ export function parseWorkbook(data: ArrayBuffer): ParsedWorkbook {
       if (trimmed !== "Client Info" && trimmed !== "Agent + Staff Info") skippedSheets.push(name);
       continue;
     }
-    const rows = parseJobSheet(wb.Sheets[name], name, department, month);
-    sheets.push({ name, department, rows: rows.length });
+    const rows = parseJobSheet(wb.Sheets[name]!, name, department as string, month);
+    sheets.push({ name, department: department as string, rows: rows.length });
     jobs.push(...rows);
   }
 
