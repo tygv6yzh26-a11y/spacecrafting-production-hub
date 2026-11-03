@@ -90,7 +90,7 @@ function Dashboard() {
         <h1 className="text-lg font-semibold">No jobs yet</h1>
         <p className="mt-2 text-sm text-muted-foreground">Import the master spreadsheet to bring in your existing jobs, or add jobs from Production Jobs.</p>
         <div className="mt-5 flex justify-center gap-2">
-          <Link to={"/import" as "/jobs"} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Import spreadsheet</Link>
+          <Link to="/import" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Import spreadsheet</Link>
           <Link to="/jobs" className="rounded-md border px-4 py-2 text-sm font-medium">Production Jobs</Link>
         </div>
       </div>
