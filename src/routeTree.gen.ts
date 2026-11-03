@@ -16,9 +16,11 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticated/delivery'
 import { Route as AuthenticatedEditingRouteImport } from './routes/_authenticated/editing'
+import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
 import { Route as AuthenticatedJobsRouteImport } from './routes/_authenticated/jobs'
 import { Route as AuthenticatedQcRouteImport } from './routes/_authenticated/qc'
 import { Route as AuthenticatedRevisionsRouteImport } from './routes/_authenticated/revisions'
+import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedWorkloadRouteImport } from './routes/_authenticated/workload'
 
 const IndexRoute = IndexRouteImport.update({
@@ -55,6 +57,11 @@ const AuthenticatedEditingRoute = AuthenticatedEditingRouteImport.update({
   path: '/editing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedJobsRoute = AuthenticatedJobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -70,6 +77,11 @@ const AuthenticatedRevisionsRoute = AuthenticatedRevisionsRouteImport.update({
   path: '/revisions',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedWorkloadRoute = AuthenticatedWorkloadRouteImport.update({
   id: '/workload',
   path: '/workload',
@@ -83,9 +95,11 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/editing': typeof AuthenticatedEditingRoute
+  '/import': typeof AuthenticatedImportRoute
   '/jobs': typeof AuthenticatedJobsRoute
   '/qc': typeof AuthenticatedQcRoute
   '/revisions': typeof AuthenticatedRevisionsRoute
+  '/team': typeof AuthenticatedTeamRoute
   '/workload': typeof AuthenticatedWorkloadRoute
 }
 export interface FileRoutesByTo {
@@ -95,9 +109,11 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/editing': typeof AuthenticatedEditingRoute
+  '/import': typeof AuthenticatedImportRoute
   '/jobs': typeof AuthenticatedJobsRoute
   '/qc': typeof AuthenticatedQcRoute
   '/revisions': typeof AuthenticatedRevisionsRoute
+  '/team': typeof AuthenticatedTeamRoute
   '/workload': typeof AuthenticatedWorkloadRoute
 }
 export interface FileRoutesById {
@@ -109,9 +125,11 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/delivery': typeof AuthenticatedDeliveryRoute
   '/_authenticated/editing': typeof AuthenticatedEditingRoute
+  '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/jobs': typeof AuthenticatedJobsRoute
   '/_authenticated/qc': typeof AuthenticatedQcRoute
   '/_authenticated/revisions': typeof AuthenticatedRevisionsRoute
+  '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/workload': typeof AuthenticatedWorkloadRoute
 }
 export interface FileRouteTypes {
@@ -123,9 +141,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/delivery'
     | '/editing'
+    | '/import'
     | '/jobs'
     | '/qc'
     | '/revisions'
+    | '/team'
     | '/workload'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -135,9 +155,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/delivery'
     | '/editing'
+    | '/import'
     | '/jobs'
     | '/qc'
     | '/revisions'
+    | '/team'
     | '/workload'
   id:
     | '__root__'
@@ -148,9 +170,11 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/delivery'
     | '/_authenticated/editing'
+    | '/_authenticated/import'
     | '/_authenticated/jobs'
     | '/_authenticated/qc'
     | '/_authenticated/revisions'
+    | '/_authenticated/team'
     | '/_authenticated/workload'
   fileRoutesById: FileRoutesById
 }
@@ -212,6 +236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEditingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/import': {
+      id: '/_authenticated/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof AuthenticatedImportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/jobs': {
       id: '/_authenticated/jobs'
       path: '/jobs'
@@ -233,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRevisionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/team': {
+      id: '/_authenticated/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AuthenticatedTeamRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/workload': {
       id: '/_authenticated/workload'
       path: '/workload'
@@ -247,9 +285,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDeliveryRoute: typeof AuthenticatedDeliveryRoute
   AuthenticatedEditingRoute: typeof AuthenticatedEditingRoute
+  AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedJobsRoute: typeof AuthenticatedJobsRoute
   AuthenticatedQcRoute: typeof AuthenticatedQcRoute
   AuthenticatedRevisionsRoute: typeof AuthenticatedRevisionsRoute
+  AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedWorkloadRoute: typeof AuthenticatedWorkloadRoute
 }
 
@@ -257,9 +297,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDeliveryRoute: AuthenticatedDeliveryRoute,
   AuthenticatedEditingRoute: AuthenticatedEditingRoute,
+  AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedJobsRoute: AuthenticatedJobsRoute,
   AuthenticatedQcRoute: AuthenticatedQcRoute,
   AuthenticatedRevisionsRoute: AuthenticatedRevisionsRoute,
+  AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedWorkloadRoute: AuthenticatedWorkloadRoute,
 }
 
