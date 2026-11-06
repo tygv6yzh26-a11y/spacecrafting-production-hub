@@ -90,7 +90,7 @@ function ImportPage() {
           res.inserted += data.length;
           res.skipped += chunk.length - data.length;
         }
-        setProgress(Math.round(((i + chunk.length) / fresh.length) * 100));
+        setProgress(Math.round(((i + chunk.length) / Math.max(1, fresh.length)) * 100));
       }
       if (updateExisting) {
         res.updated = 0;
@@ -115,7 +115,7 @@ function ImportPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Import Spreadsheet</h1>
         <p className="text-sm text-muted-foreground">
-          Upload the master .xlsx. Jul–Nov 2026 VE / SVV / AI tabs, Social Cut Projects, Ongoing Projects, Client Info and Agent + Staff Info are read. Jobs already in the app are skipped, so it's safe to re-run.
+          Upload the master .xlsx. Jul–Nov 2026 VE / SVV / AI tabs, Social Cut Projects, Ongoing Projects, Client Info and Agent + Staff Info are read. Re-uploading never creates duplicates; turn on "Update existing jobs" to refresh statuses, editors and links from the sheet.
         </p>
       </div>
 
