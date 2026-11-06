@@ -15,7 +15,7 @@ import { JobDialog } from "@/components/job-dialog";
 import { cn } from "@/lib/utils";
 import { editorsQuery, formatDate, jobsQuery, todayISO, useDeleteJob, useUpdateJob, type Job } from "@/lib/jobs";
 import { meQuery, canManage } from "@/lib/auth";
-import { DEPARTMENTS, departmentLabel, stageOf, statusOptions, timingOf, STAGE_META, type Stage } from "@/lib/workflow";
+import { DEPARTMENTS, departmentLabel, stageOf, statusOptions, timingOf, STAGE_META, PRESETS, countdownLabel, nextActions, urgencyRank, type Stage, type PresetKey } from "@/lib/workflow";
 
 type SortKey = "due_date" | "shoot_date" | "editor" | "status" | "client" | "category" | "department";
 type QuickAction = { label: string; status: string };
@@ -30,6 +30,7 @@ export function JobsView({
   defaultSort = { key: "due_date", dir: "asc" },
   showNew = true,
   hideClosedByDefault = false,
+  cockpit = false,
 }: {
   title: string;
   description?: string;
@@ -38,6 +39,7 @@ export function JobsView({
   defaultSort?: { key: SortKey; dir: "asc" | "desc" };
   showNew?: boolean;
   hideClosedByDefault?: boolean;
+  cockpit?: boolean;
 }) {
   const { data: jobs } = useSuspenseQuery(jobsQuery);
   const { data: editors = [] } = useQuery(editorsQuery);
@@ -63,8 +65,21 @@ export function JobsView({
   const [editing, setEditing] = useState<Job | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Job | null>(null);
+  const [preset, setPreset] = useState<PresetKey>("active");
+  const [timingPill, setTimingPill] = useState<"overdue" | "due_today" | null>(null);
+  const [urgentFirst, setUrgentFirst] = useState(cockpit);
 
-  const scoped = useMemo(() => (stages ? jobs.filter((j) => stages.includes(stageOf(j.status))) : jobs), [jobs, stages]);
+  const presetStages = cockpit ? (PRESETS.find((p) => p.key === preset)?.stages as readonly Stage[] | null) : null;
+  const scoped = useMemo(() => {
+    const st = stages ?? presetStages;
+    return st ? jobs.filter((j) => st.includes(stageOf(j.status))) : jobs;
+  }, [jobs, stages, presetStages]);
+  const active = useMemo(() => jobs.filter((j) => !["delivered", "canceled"].includes(stageOf(j.status))), [jobs]);
+  const counts = useMemo(() => ({
+    overdue: active.filter((j) => timingOf(j, today) === "overdue").length,
+    due_today: active.filter((j) => timingOf(j, today) === "due_today").length,
+    byPreset: Object.fromEntries(PRESETS.map((p) => [p.key, p.stages ? jobs.filter((j) => (p.stages as readonly Stage[]).includes(stageOf(j.status))).length : jobs.length])) as Record<PresetKey, number>,
+  }), [jobs, active, today]);
   const categories = useMemo(() => [...new Set(scoped.map((j) => j.category?.trim()).filter(Boolean) as string[])].sort(), [scoped]);
   const months = useMemo(() => [...new Set(scoped.map((j) => j.sheet_month).filter(Boolean) as string[])], [scoped]);
   const editorNames = useMemo(() => {
@@ -91,11 +106,16 @@ export function JobsView({
       if (dueFrom && (!j.due_date || j.due_date < dueFrom)) return false;
       if (dueTo && (!j.due_date || j.due_date > dueTo)) return false;
       if (overdueOnly && timingOf(j, today) !== "overdue") return false;
-      if (hideClosed && ["delivered", "canceled"].includes(stageOf(j.status))) return false;
+      if (hideClosed && !(cockpit && preset === "all") && ["delivered", "canceled"].includes(stageOf(j.status))) return false;
+      if (timingPill && timingOf(j, today) !== timingPill) return false;
       return true;
     });
     const dir = sort.dir === "asc" ? 1 : -1;
     rows.sort((a, b) => {
+      if (urgentFirst) {
+        const d = urgencyRank(a, today) - urgencyRank(b, today);
+        if (d) return d;
+      }
       const av = (a[sort.key] ?? "") as string;
       const bv = (b[sort.key] ?? "") as string;
       if (!av && bv) return 1;
@@ -103,7 +123,7 @@ export function JobsView({
       return av.localeCompare(bv) * dir;
     });
     return rows;
-  }, [scoped, q, dept, category, editor, status, month, shootFrom, shootTo, dueFrom, dueTo, overdueOnly, hideClosed, sort, today]);
+  }, [scoped, q, dept, category, editor, status, month, shootFrom, shootTo, dueFrom, dueTo, overdueOnly, hideClosed, sort, today, timingPill, urgentFirst, cockpit, preset]);
 
   const pageRows = filtered.slice(page * PAGE, page * PAGE + PAGE);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE));
@@ -111,7 +131,7 @@ export function JobsView({
 
   function resetFilters() {
     setDept("all"); setCategory("all"); setEditor("all"); setStatus("all"); setMonth("all");
-    setShootFrom(""); setShootTo(""); setDueFrom(""); setDueTo(""); setOverdueOnly(false); setPage(0);
+    setShootFrom(""); setShootTo(""); setDueFrom(""); setDueTo(""); setOverdueOnly(false); setTimingPill(null); setPage(0);
   }
 
   function toggleSort(key: SortKey) {
@@ -153,6 +173,26 @@ export function JobsView({
         )}
       </div>
 
+      {cockpit && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <Pill label="Overdue" value={counts.overdue} tone="overdue" active={timingPill === "overdue"} onClick={() => { setPreset("active"); setTimingPill(timingPill === "overdue" ? null : "overdue"); setPage(0); }} />
+            <Pill label="Due today" value={counts.due_today} tone="warn" active={timingPill === "due_today"} onClick={() => { setPreset("active"); setTimingPill(timingPill === "due_today" ? null : "due_today"); setPage(0); }} />
+            {(["footage", "editing", "qc", "revision"] as const).map((k) => (
+              <Pill key={k} label={PRESETS.find((p) => p.key === k)!.label} value={counts.byPreset[k]} active={preset === k && !timingPill} onClick={() => { setPreset(preset === k ? "active" : k); setTimingPill(null); setPage(0); }} />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {PRESETS.map((p) => (
+              <button key={p.key} onClick={() => { setPreset(p.key); setTimingPill(null); setPage(0); }}
+                className={cn("rounded-full border px-3 py-1 text-xs font-medium transition-colors", preset === p.key && !timingPill ? "border-primary bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground")}>
+                {p.label} <span className="ml-1 opacity-70">{counts.byPreset[p.key]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-lg border bg-card shadow-card">
         <div className="flex flex-wrap items-center gap-2 border-b p-3">
           <div className="relative w-full max-w-xs">
@@ -171,9 +211,14 @@ export function JobsView({
           <label className="flex items-center gap-1.5">
             <Checkbox checked={overdueOnly} onCheckedChange={(v) => { setOverdueOnly(!!v); setPage(0); }} /> Overdue only
           </label>
-          <label className="flex items-center gap-1.5">
+          {cockpit && (
+            <label className="flex items-center gap-1.5">
+              <Checkbox checked={urgentFirst} onCheckedChange={(v) => { setUrgentFirst(!!v); setPage(0); }} /> Pin overdue & due today on top
+            </label>
+          )}
+          {!cockpit && <label className="flex items-center gap-1.5">
             <Checkbox checked={hideClosed} onCheckedChange={(v) => { setHideClosed(!!v); setPage(0); }} /> Hide delivered & canceled
-          </label>
+          </label>}
           {activeFilters > 0 && (
             <button onClick={resetFilters} className="inline-flex items-center gap-1 text-primary hover:underline">
               <X className="h-3 w-3" /> Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}
@@ -211,8 +256,11 @@ export function JobsView({
                 return (
                   <tr key={j.id} className={cn("border-b align-top last:border-0 hover:bg-muted/40", timing === "overdue" && "bg-overdue-soft hover:bg-overdue-soft")}>
                     <td className={cn("whitespace-nowrap px-3 py-2", timing === "overdue" && "border-l-2 border-l-overdue")}>
-                      <div className={cn("font-medium", timing === "overdue" && "text-overdue")}>{formatDate(j.due_date)}</div>
-                      <TimingBadge timing={timing} />
+                      <div className={cn("font-medium", timing === "overdue" && "text-overdue")}>{formatDeadline(j.due_date)}</div>
+                      <div className="flex items-center gap-1.5">
+                        <TimingBadge timing={timing} />
+                        {countdownLabel(j, today) && <span className={cn("text-[11px]", timing === "overdue" ? "font-semibold text-overdue" : "text-muted-foreground")}>{countdownLabel(j, today)}</span>}
+                      </div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
                       {j.calendar_url ? (
@@ -260,7 +308,12 @@ export function JobsView({
                     </td>
                     <td className="whitespace-nowrap px-2 py-1.5">
                       <div className="flex items-center gap-1">
-                        {quickActions.filter((a) => a.status !== j.status).map((a) => (
+                        {firstLink(j.deliverable_links) && (
+                          <Button asChild size="icon" variant="ghost" className="h-7 w-7" aria-label="Open review link">
+                            <a href={firstLink(j.deliverable_links)!} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                          </Button>
+                        )}
+                        {(quickActions.length ? quickActions : cockpit ? nextActions(j.status, j.department) : []).filter((a) => a.status !== j.status).map((a) => (
                           <Button key={a.status} size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => update.mutate({ id: j.id, patch: { status: a.status } })}>
                             {a.label}
                           </Button>
@@ -312,6 +365,25 @@ export function JobsView({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function firstLink(text: string | null): string | null {
+  return text?.match(/https?:\/\/\S+/)?.[0] ?? null;
+}
+
+function formatDeadline(iso: string | null) {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y!, m! - 1, d!).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function Pill({ label, value, tone, active, onClick }: { label: string; value: number; tone?: "overdue" | "warn"; active: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className={cn("rounded-lg border bg-card p-3 text-left shadow-card transition-colors hover:border-primary/50", active && "border-primary ring-1 ring-primary")}>
+      <div className={cn("text-2xl font-semibold tabular-nums", tone === "overdue" && value > 0 && "text-overdue", tone === "warn" && value > 0 && "text-warning")}>{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </button>
   );
 }
 
