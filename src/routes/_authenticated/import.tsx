@@ -47,8 +47,8 @@ function ImportPage() {
     return parsed.jobs.flatMap((j) => {
       const cur = existingByKey.get(j.import_key);
       if (!cur) return [];
-      const patch: Record<string, string | null> = {};
-      for (const f of fields) if ((j[f] ?? null) !== (cur[f] ?? null) && j[f] != null) patch[f] = j[f];
+      const patch: JobUpdate = {};
+      for (const f of fields) if ((j[f] ?? null) !== (cur[f] ?? null) && j[f] != null) (patch as Record<string, string | null>)[f] = j[f];
       return Object.keys(patch).length ? [{ id: cur.id, patch }] : [];
     });
   }, [parsed, existingByKey]);
@@ -223,9 +223,9 @@ function ImportPage() {
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Import {fresh.length} jobs?</AlertDialogTitle>
+            <AlertDialogTitle>Import spreadsheet?</AlertDialogTitle>
             <AlertDialogDescription>
-              {fresh.length} new jobs across {new Set(fresh.map((j) => departmentLabel(j.department))).size} sheets will be added. {dupes} jobs already in the app will be left untouched.
+              {fresh.length} new jobs across {new Set(fresh.map((j) => departmentLabel(j.department))).size} sheets will be added. {updateExisting ? `${changed.length} existing jobs will be updated from the sheet.` : `${dupes} jobs already in the app will be left untouched.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
