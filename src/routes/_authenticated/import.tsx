@@ -6,7 +6,7 @@ import { CheckCircle2, FileSpreadsheet, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { parseWorkbook, type ParsedWorkbook } from "@/lib/import-sheet";
-import { jobsQuery, formatDate } from "@/lib/jobs";
+import { jobsQuery, formatDate, type JobUpdate } from "@/lib/jobs";
 import { departmentLabel } from "@/lib/workflow";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
