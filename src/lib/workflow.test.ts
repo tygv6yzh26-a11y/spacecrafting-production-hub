@@ -27,3 +27,19 @@ describe("workflow rules", () => {
     expect(timingOf({ status: "Ready to edit", due_date: "2026-11-04" }, "2026-11-03")).toBe("at_risk");
   });
 });
+
+import { countdownLabel, nextActions, urgencyRank } from "./workflow";
+describe("cockpit rules", () => {
+  it("counts down to the deadline", () => {
+    expect(countdownLabel({ status: "Editing", due_date: "2026-11-04" }, "2026-11-06")).toBe("Overdue 2d");
+    expect(countdownLabel({ status: "Editing", due_date: "2026-11-06" }, "2026-11-06")).toBe("Due today 5PM");
+    expect(countdownLabel({ status: "Delivered", due_date: "2026-11-04" }, "2026-11-06")).toBeNull();
+  });
+  it("pins overdue before due today", () => {
+    expect(urgencyRank({ status: "Editing", due_date: "2026-11-01" }, "2026-11-06")).toBeLessThan(
+      urgencyRank({ status: "Editing", due_date: "2026-11-06" }, "2026-11-06"));
+  });
+  it("Needs QC offers Deliver and Revision", () => {
+    expect(nextActions("Needs QC", "VE").map((a) => a.status)).toEqual(["Delivered", "Revision requested"]);
+  });
+});

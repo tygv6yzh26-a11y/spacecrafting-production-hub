@@ -152,3 +152,57 @@ export function timingOf(job: { status: string | null; due_date: string | null }
   if (early && job.due_date <= addDays(todayISO, 1)) return "at_risk";
   return "on_track";
 }
+
+/** Whole days from today until the deadline (negative = overdue). */
+export function daysUntil(dueISO: string, todayISO: string): number {
+  const [a, b, c] = dueISO.split("-").map(Number);
+  const [x, y, z] = todayISO.split("-").map(Number);
+  return Math.round((Date.UTC(a!, b! - 1, c!) - Date.UTC(x!, y! - 1, z!)) / 86_400_000);
+}
+
+/** Human countdown for a deadline, e.g. "Overdue 2d", "Due today 5PM", "In 3d". */
+export function countdownLabel(job: { status: string | null; due_date: string | null }, todayISO: string): string | null {
+  if (!job.due_date || isClosed(job.status)) return null;
+  const n = daysUntil(job.due_date, todayISO);
+  if (n < 0) return `Overdue ${-n}d`;
+  if (n === 0) return "Due today 5PM";
+  if (n === 1) return "Due tomorrow";
+  return `In ${n}d`;
+}
+
+/** Urgency rank used to pin jobs: overdue, due today, at risk, then the rest. */
+export function urgencyRank(job: { status: string | null; due_date: string | null }, todayISO: string): number {
+  const t = timingOf(job, todayISO);
+  return t === "overdue" ? 0 : t === "due_today" ? 1 : t === "at_risk" ? 2 : t === "on_track" ? 3 : 4;
+}
+
+/** One-click next steps per stage, using existing dropdown statuses. */
+export function nextActions(status: string | null, department: string): { label: string; status: string }[] {
+  const ongoing = department === "Ongoing";
+  switch (stageOf(status)) {
+    case "shoot": return [{ label: "Footage in", status: ongoing ? "Ready to Edit" : "Ready to edit" }];
+    case "ready": return [{ label: "Start edit", status: "Editing" }];
+    case "editing":
+    case "revision": return [{ label: "Send to QC", status: "Needs QC" }];
+    case "client": return [{ label: "Resume edit", status: "Editing" }];
+    case "qc": return [
+      { label: "Deliver", status: "Delivered" },
+      ...(ongoing ? [] : [{ label: "Revision", status: "Revision requested" }]),
+    ];
+    case "qc_complete": return [{ label: "Deliver", status: "Delivered" }];
+    default: return [];
+  }
+}
+
+/** Morning preset tabs for the production table. */
+export const PRESETS = [
+  { key: "active", label: "All active", stages: ["shoot", "ready", "editing", "client", "qc", "qc_complete", "revision"] },
+  { key: "footage", label: "Waiting on footage", stages: ["shoot"] },
+  { key: "ready", label: "Ready to edit", stages: ["ready"] },
+  { key: "editing", label: "In edit", stages: ["editing"] },
+  { key: "qc", label: "Needs QC", stages: ["qc", "qc_complete"] },
+  { key: "revision", label: "Revisions", stages: ["revision"] },
+  { key: "client", label: "Waiting on client", stages: ["client"] },
+  { key: "all", label: "All incl. history", stages: null },
+] as const satisfies readonly { key: string; label: string; stages: readonly Stage[] | null }[];
+export type PresetKey = (typeof PRESETS)[number]["key"];
