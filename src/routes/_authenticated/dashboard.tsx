@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
-import { AlertTriangle, CalendarClock, CheckCheck, Clock, Film, Package, RotateCcw, Upload } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { EditorSelect, JobLinks, NextActionButtons, RushBadge } from "@/components/job-controls";
+import { JobDialog } from "@/components/job-dialog";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, CalendarClock, ClipboardCopy, CheckCheck, Clock, Film, Package, RotateCcw, Upload } from "lucide-react";
 import { jobsQuery, todayISO, formatDate, type Job } from "@/lib/jobs";
-import { STAGE_META, stageOf, timingOf, isClosed, departmentLabel, type Stage } from "@/lib/workflow";
+import { buildBriefing, STAGE_META, stageOf, timingOf, isClosed, departmentLabel, type Stage } from "@/lib/workflow";
 import { StatusBadge, TimingBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +35,16 @@ function attentionReason(j: Job, today: string): AttentionReason | null {
 function Dashboard() {
   const { data: jobs } = useSuspenseQuery(jobsQuery);
   const today = todayISO();
+  const [open, setOpen] = useState<Job | null>(null);
+  const copyBriefing = async () => {
+    const label = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    try {
+      await navigator.clipboard.writeText(buildBriefing(jobs, today, label));
+      toast.success("Morning briefing copied", { description: "Paste it into Slack, email or a text." });
+    } catch {
+      toast.error("Couldn't copy to clipboard");
+    }
+  };
   const monthPrefix = today.slice(0, 7);
 
   const stats = useMemo(() => {
@@ -99,9 +113,12 @@ function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Morning Overview</h1>
-        <p className="text-sm text-muted-foreground">Where every video job stands right now.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Morning Overview</h1>
+          <p className="text-sm text-muted-foreground">Where every video job stands right now. Click a job to edit it.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={copyBriefing}><ClipboardCopy className="h-4 w-4" /> Copy morning briefing</Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -135,15 +152,19 @@ function Dashboard() {
             {attention.length === 0 && <p className="px-4 py-10 text-center text-sm text-muted-foreground">Nothing needs attention. 🎬</p>}
             <ul className="divide-y">
               {attention.slice(0, 80).map(({ j, r }) => (
-                <li key={j.id} className={cn("flex items-center gap-3 px-4 py-2.5 text-sm", r === "Overdue" && "bg-overdue-soft")}>
-                  <span className={cn("w-28 shrink-0 text-xs font-medium", r === "Overdue" ? "text-overdue" : "text-muted-foreground")}>{r}</span>
+                <li key={j.id} onClick={() => setOpen(j)} className={cn("flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 text-sm hover:bg-muted/50", r === "Overdue" && "bg-overdue-soft")}>
+                  <span className={cn("w-24 shrink-0 text-xs font-medium", r === "Overdue" ? "text-overdue" : "text-muted-foreground")}>{r}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{j.address ?? j.project_name}</div>
+                    <div className="flex items-center gap-1.5 truncate font-medium"><RushBadge job={j} /><span className="truncate">{j.address ?? j.project_name}</span></div>
                     <div className="truncate text-xs text-muted-foreground">{departmentLabel(j.department)} · {j.category} · {j.client}</div>
                   </div>
-                  <StatusBadge status={j.status} className="hidden max-w-[180px] md:inline-flex" />
-                  <span className="w-20 shrink-0 text-xs text-muted-foreground">{j.editor ?? "Unassigned"}</span>
-                  <span className="w-20 shrink-0 text-right text-xs">{formatDate(j.due_date)}</span>
+                  <StatusBadge status={j.status} className="hidden max-w-[160px] md:inline-flex" />
+                  <span className="w-16 shrink-0 text-right text-xs">{formatDate(j.due_date)}</span>
+                  <div className="flex w-full items-center justify-end gap-1.5 pl-[108px]">
+                    <JobLinks job={j} />
+                    <NextActionButtons job={j} />
+                    <EditorSelect job={j} />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -177,19 +198,22 @@ function Dashboard() {
             </div>
             <ul className="divide-y">
               {editors.slice(0, 8).map((e) => (
-                <li key={e.name} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                <li key={e.name}>
+                  <Link to="/workload" hash={`editor-${e.name}`} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted/50">
                   <span className="w-28 truncate font-medium">{e.name}</span>
                   <span className="text-xs text-muted-foreground">{e.list.length} active</span>
                   {e.overdue > 0 && <span className="text-xs font-medium text-overdue">{e.overdue} overdue</span>}
                   <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" /> next {formatDate(e.list.find((j) => j.due_date)?.due_date)}
                   </span>
+                  </Link>
                 </li>
               ))}
             </ul>
           </section>
         </div>
       </div>
+      <JobDialog open={!!open} onOpenChange={(o) => !o && setOpen(null)} job={open} />
     </div>
   );
 }
