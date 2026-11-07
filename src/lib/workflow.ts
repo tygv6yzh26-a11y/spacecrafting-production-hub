@@ -206,3 +206,36 @@ export const PRESETS = [
   { key: "all", label: "All incl. history", stages: null },
 ] as const satisfies readonly { key: string; label: string; stages: readonly Stage[] | null }[];
 export type PresetKey = (typeof PRESETS)[number]["key"];
+
+/** Rush: active job whose deadline is tighter than the standard shoot + 3 day turnaround. */
+export function isRush(job: { status: string | null; shoot_date: string | null; due_date: string | null }): boolean {
+  if (!job.shoot_date || !job.due_date || isClosed(job.status)) return false;
+  return daysUntil(job.due_date, job.shoot_date) < DELIVERY_OFFSET_DAYS;
+}
+
+/** Plain-text morning briefing for pasting into Slack/email. */
+export function buildBriefing(
+  jobs: { status: string; due_date: string | null; shoot_date: string | null; editor: string | null; address: string | null; project_name: string | null }[],
+  todayISO: string,
+  dateLabel: string,
+): string {
+  const active = jobs.filter((j) => !isClosed(j.status));
+  const name = (j: (typeof jobs)[number]) => j.address ?? j.project_name ?? "Untitled";
+  const line = (j: (typeof jobs)[number], extra: string) => `• ${name(j)} — ${j.editor ?? "Unassigned"} (${extra})`;
+  const overdue = active.filter((j) => timingOf(j, todayISO) === "overdue");
+  const today = active.filter((j) => timingOf(j, todayISO) === "due_today");
+  const unassigned = active.filter((j) => !j.editor);
+  const footage = active.filter((j) => stageOf(j.status) === "shoot");
+  const out = [`Spacecrafting Video Morning Briefing — ${dateLabel}`, ""];
+  const section = (title: string, list: typeof jobs, extra: (j: (typeof jobs)[number]) => string) => {
+    out.push(`${title} (${list.length}):`);
+    if (list.length === 0) out.push("• None");
+    list.forEach((j) => out.push(line(j, extra(j))));
+    out.push("");
+  };
+  section("OVERDUE", overdue, (j) => `due ${j.due_date}`);
+  section("DELIVERING TODAY", today, (j) => j.status);
+  section("UNASSIGNED", unassigned, (j) => `shot ${j.shoot_date ?? "?"}`);
+  section("WAITING ON FOOTAGE", footage, (j) => `shot ${j.shoot_date ?? "?"}`);
+  return out.join("\n").trim();
+}

@@ -43,3 +43,20 @@ describe("cockpit rules", () => {
     expect(nextActions("Needs QC", "VE").map((a) => a.status)).toEqual(["Delivered", "Revision requested"]);
   });
 });
+
+import { isRush, buildBriefing } from "./workflow";
+describe("rush + briefing", () => {
+  it("flags deadlines tighter than shoot + 3 days as rush", () => {
+    expect(isRush({ status: "Editing", shoot_date: "2026-11-06", due_date: "2026-11-07" })).toBe(true);
+    expect(isRush({ status: "Editing", shoot_date: "2026-11-06", due_date: "2026-11-09" })).toBe(false);
+    expect(isRush({ status: "Delivered", shoot_date: "2026-11-06", due_date: "2026-11-07" })).toBe(false);
+  });
+  it("lists overdue and unassigned jobs in the briefing", () => {
+    const b = buildBriefing([
+      { status: "Editing", due_date: "2026-11-05", shoot_date: "2026-11-02", editor: "Beau", address: "1 Lake Ave", project_name: null },
+      { status: "Ready to edit", due_date: "2026-11-10", shoot_date: "2026-11-07", editor: null, address: "2 Grand Ave", project_name: null },
+    ], "2026-11-07", "Sat Nov 7");
+    expect(b).toContain("OVERDUE (1):\n• 1 Lake Ave — Beau");
+    expect(b).toContain("UNASSIGNED (1):\n• 2 Grand Ave — Unassigned");
+  });
+});

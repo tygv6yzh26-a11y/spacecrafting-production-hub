@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -43,6 +43,7 @@ function Layout() {
 
   return (
     <SidebarProvider>
+      <SearchShortcut />
       <div className="flex min-h-screen w-full">
         <AppSidebar me={me} />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -71,4 +72,24 @@ export function PageSkeleton() {
       <Skeleton className="h-96" />
     </div>
   );
+}
+
+/** Press "/" or Cmd/Ctrl+K anywhere to jump to the production job search. */
+function SearchShortcut() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const focus = () => document.querySelector<HTMLInputElement>("[data-global-search]")?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      const typing = t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName);
+      const isK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k";
+      if (!isK && (e.key !== "/" || typing)) return;
+      e.preventDefault();
+      if (document.querySelector("[data-global-search]")) return focus();
+      navigate({ to: "/jobs" }).then(() => setTimeout(focus, 150));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navigate]);
+  return null;
 }
