@@ -367,9 +367,6 @@ export function JobsView({
   );
 }
 
-function firstLink(text: string | null): string | null {
-  return text?.match(/https?:\/\/\S+/)?.[0] ?? null;
-}
 
 function formatDeadline(iso: string | null) {
   if (!iso) return "—";
