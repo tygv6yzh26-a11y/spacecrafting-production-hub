@@ -12,6 +12,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge, TimingBadge } from "@/components/status-badge";
 import { JobDialog } from "@/components/job-dialog";
+import { JobLinks, NotesCell, RushBadge } from "@/components/job-controls";
 import { cn } from "@/lib/utils";
 import { editorsQuery, formatDate, jobsQuery, todayISO, useDeleteJob, useUpdateJob, type Job } from "@/lib/jobs";
 import { meQuery, canManage } from "@/lib/auth";
@@ -197,7 +198,7 @@ export function JobsView({
         <div className="flex flex-wrap items-center gap-2 border-b p-3">
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
-            <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Search address, client, agent, order #" className="h-8 pl-8 text-sm" />
+            <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} data-global-search placeholder="Search address, client, agent, order #  ( / )" className="h-8 pl-8 text-sm" />
           </div>
           <FilterSelect value={dept} onChange={setDept} placeholder="All sheets" options={DEPARTMENTS.map((d) => ({ value: d.value, label: d.label }))} />
           <FilterSelect value={month} onChange={setMonth} placeholder="All months" options={months.map((m) => ({ value: m, label: m }))} />
@@ -259,6 +260,7 @@ export function JobsView({
                       <div className={cn("font-medium", timing === "overdue" && "text-overdue")}>{formatDeadline(j.due_date)}</div>
                       <div className="flex items-center gap-1.5">
                         <TimingBadge timing={timing} />
+                        <RushBadge job={j} />
                         {countdownLabel(j, today) && <span className={cn("text-[11px]", timing === "overdue" ? "font-semibold text-overdue" : "text-muted-foreground")}>{countdownLabel(j, today)}</span>}
                       </div>
                     </td>
@@ -305,10 +307,12 @@ export function JobsView({
                           <a href={j.deliverable_links} target="_blank" rel="noreferrer" className="truncate text-primary hover:underline">Deliverable link</a>
                         ) : <div className="truncate italic" title={j.deliverable_links}>{j.deliverable_links}</div>
                       )}
+                      <NotesCell job={j} />
                     </td>
                     <td className="whitespace-nowrap px-2 py-1.5">
                       <div className="flex items-center gap-1">
-                        {firstLink(j.deliverable_links) && (
+                        <JobLinks job={j} />
+                        {false && firstLink(j.deliverable_links) && (
                           <Button asChild size="icon" variant="ghost" className="h-7 w-7" aria-label="Open review link">
                             <a href={firstLink(j.deliverable_links)!} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /></a>
                           </Button>

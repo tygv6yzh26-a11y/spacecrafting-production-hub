@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Film, MapPin } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,4 +67,33 @@ export function JobLinks({ job }: { job: Job }) {
 export function RushBadge({ job }: { job: Job }) {
   if (!isRush(job)) return null;
   return <span className="rounded bg-warning px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground">Rush</span>;
+}
+
+export function NotesCell({ job }: { job: Job }) {
+  const update = useUpdateJob();
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(job.notes ?? "");
+  const save = () => {
+    setEditing(false);
+    const next = val.trim() || null;
+    if (next !== (job.notes ?? null)) update.mutate({ id: job.id, patch: { notes: next } });
+  };
+  if (editing)
+    return (
+      <input
+        autoFocus
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") { setVal(job.notes ?? ""); setEditing(false); } }}
+        className="mt-1 w-full rounded border bg-background px-1.5 py-0.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
+        placeholder="Add a note…"
+      />
+    );
+  return (
+    <button type="button" onClick={() => { setVal(job.notes ?? ""); setEditing(true); }} title={job.notes ?? "Add a note"}
+      className={cn("mt-1 block w-full truncate rounded px-1 text-left text-xs hover:bg-muted", job.notes ? "text-foreground" : "text-muted-foreground/60")}>
+      {job.notes || "+ note"}
+    </button>
+  );
 }
