@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { parseWorkbook, type ParsedWorkbook } from "@/lib/import-sheet";
 import { jobsQuery, formatDate, type JobUpdate } from "@/lib/jobs";
-import { departmentLabel } from "@/lib/workflow";
+import { departmentLabel, isClosed } from "@/lib/workflow";
+import { todayISO } from "@/lib/jobs";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { Progress } from "@/components/ui/progress";
@@ -118,6 +119,8 @@ function ImportPage() {
           Upload the master .xlsx. Jul–Nov 2026 VE / SVV / AI tabs, Social Cut Projects, Ongoing Projects, Client Info and Agent + Staff Info are read. Re-uploading never creates duplicates; turn on "Update existing jobs" to refresh statuses, editors and links from the sheet.
         </p>
       </div>
+
+      <ArchiveOldJobs />
 
       <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed bg-card p-10 text-center shadow-card hover:border-primary/50">
         {parsing ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <FileSpreadsheet className="h-6 w-6 text-primary" />}
@@ -243,6 +246,53 @@ function Stat({ label, value, highlight }: { label: string; value: number; highl
     <div className={`rounded-lg border bg-card p-4 shadow-card ${highlight ? "border-primary/40" : ""}`}>
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+/** One-click cleanup: mark open jobs due before this month as Delivered. */
+function ArchiveOldJobs() {
+  const { data: jobs } = useSuspenseQuery(jobsQuery);
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const cutoff = todayISO().slice(0, 8) + "01";
+  const monthName = new Date(`${cutoff}T12:00:00`).toLocaleDateString("en-US", { month: "long" });
+  const stale = jobs.filter((j) => !isClosed(j.status) && j.due_date && j.due_date < cutoff);
+  if (stale.length === 0) return null;
+  const run = async () => {
+    setBusy(true);
+    const ids = stale.map((j) => j.id);
+    let failed = 0;
+    for (let i = 0; i < ids.length; i += 200) {
+      const { error } = await supabase.from("jobs").update({ status: "Delivered" }).in("id", ids.slice(i, i + 200));
+      if (error) failed += Math.min(200, ids.length - i);
+    }
+    await qc.invalidateQueries({ queryKey: ["jobs"] });
+    setBusy(false);
+    setOpen(false);
+    if (failed) toast.error(`${failed} jobs couldn't be updated`);
+    else toast.success(`${ids.length} older jobs marked Delivered`);
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-warning bg-warning-soft p-4 shadow-card">
+      <div className="flex-1 text-sm">
+        <div className="font-medium">{stale.length} jobs due before {monthName} are still open</div>
+        <div className="text-xs text-muted-foreground">They inflate your overdue count. Mark them all Delivered if they're actually done.</div>
+      </div>
+      <Button variant="outline" onClick={() => setOpen(true)}>Mark as Delivered</Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark {stale.length} older jobs as Delivered?</AlertDialogTitle>
+            <AlertDialogDescription>Every job due before {monthName} 1 that isn't delivered or canceled will be set to Delivered. Jobs due this month are not touched.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={busy} onClick={(e) => { e.preventDefault(); run(); }}>{busy ? "Updating…" : "Mark Delivered"}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
