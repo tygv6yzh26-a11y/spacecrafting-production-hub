@@ -312,11 +312,6 @@ export function JobsView({
                     <td className="whitespace-nowrap px-2 py-1.5">
                       <div className="flex items-center gap-1">
                         <JobLinks job={j} />
-                        {false && firstLink(j.deliverable_links) && (
-                          <Button asChild size="icon" variant="ghost" className="h-7 w-7" aria-label="Open review link">
-                            <a href={firstLink(j.deliverable_links)!} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /></a>
-                          </Button>
-                        )}
                         {(quickActions.length ? quickActions : cockpit ? nextActions(j.status, j.department) : []).filter((a) => a.status !== j.status).map((a) => (
                           <Button key={a.status} size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => update.mutate({ id: j.id, patch: { status: a.status } })}>
                             {a.label}
