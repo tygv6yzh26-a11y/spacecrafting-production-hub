@@ -42,7 +42,7 @@ function category(summary: string, dept: string) {
 function photographers(users: unknown[] | null | undefined) {
   if (!users?.length) return null;
   const names = users
-    .map((u) => (u && typeof u === "object" ? ((u as Record<string, unknown>).fullName ?? (u as Record<string, unknown>).name) : null))
+    .map((u) => (u && typeof u === "object" ? ((u as Record<string, unknown>)['fullName'] ?? (u as Record<string, unknown>)['name']) : null))
     .filter((n): n is string => typeof n === "string");
   return names.length ? names.join(", ") : `${users.length} Photographer(s)`;
 }
