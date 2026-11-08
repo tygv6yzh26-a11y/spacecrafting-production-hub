@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Film, MapPin } from "lucide-react";
+import { CalendarDays, Film, MapPin, PlayCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { editorsQuery, useUpdateJob, type Job } from "@/lib/jobs";
@@ -46,6 +47,42 @@ export function NextActionButtons({ job }: { job: Job }) {
   );
 }
 
+/** Convert a review link into something playable inside the app. */
+export function embedUrl(url: string): string {
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{6,})/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)(?:\/(\w+))?/);
+  if (vm && !url.includes("player.vimeo.com")) return `https://player.vimeo.com/video/${vm[1]}${vm[2] ? `?h=${vm[2]}` : ""}`;
+  if (url.includes("dropbox.com")) return url.replace(/[?&]dl=0/, "").replace("www.dropbox.com", "dl.dropboxusercontent.com");
+  return url;
+}
+
+export function PreviewButton({ job }: { job: Job }) {
+  const [open, setOpen] = useState(false);
+  const url = firstUrl(job.deliverable_links) ?? job.address_url;
+  if (!url) return null;
+  const src = embedUrl(url);
+  const isFile = /\.(mp4|mov|webm)(\?|$)/i.test(src) || src.includes("dl.dropboxusercontent.com");
+  return (
+    <span onClick={stop}>
+      <button type="button" title="Preview video" aria-label="Preview video" onClick={() => setOpen(true)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-primary">
+        <PlayCircle className="h-3.5 w-3.5" />
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader><DialogTitle className="truncate pr-6 text-sm">{job.address ?? job.project_name ?? "Preview"}</DialogTitle></DialogHeader>
+          <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
+            {open && (isFile
+              ? <video src={src} controls autoPlay className="h-full w-full" />
+              : <iframe src={src} title="Video preview" className="h-full w-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />)}
+          </div>
+          <a href={url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">Open in new tab if it doesn't load here</a>
+        </DialogContent>
+      </Dialog>
+    </span>
+  );
+}
+
 export function JobLinks({ job }: { job: Job }) {
   const links = [
     { href: job.calendar_url, label: "Shoot calendar", Icon: CalendarDays },
@@ -55,6 +92,7 @@ export function JobLinks({ job }: { job: Job }) {
   if (!links.length) return null;
   return (
     <div className="flex items-center gap-0.5" onClick={stop}>
+      <PreviewButton job={job} />
       {links.map(({ href, label, Icon }) => (
         <a key={label} href={href!} target="_blank" rel="noreferrer" title={label} aria-label={label} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-primary">
           <Icon className="h-3.5 w-3.5" />
