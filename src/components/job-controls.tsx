@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Film, MapPin, PlayCircle } from "lucide-react";
+import { CalendarDays, Film, FolderSearch, MapPin, PlayCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,12 @@ const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
 export function firstUrl(text: string | null | undefined) {
   return text?.match(/https?:\/\/\S+/)?.[0] ?? null;
+}
+export function dropboxSearchUrl(query: string | null | undefined): string {
+  if (!query) return "https://www.dropbox.com/home";
+  // Grabs street address before city/state (e.g. "5720 Oakview Lane")
+  const cleaned = query.replace(/,.*$/, "").trim();
+  return `https://www.dropbox.com/home?query=${encodeURIComponent(cleaned)}`;
 }
 
 export function EditorSelect({ job, className }: { job: Job; className?: string }) {
