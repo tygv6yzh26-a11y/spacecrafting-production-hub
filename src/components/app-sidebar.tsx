@@ -1,10 +1,11 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, Clapperboard, FileUp, Film, LayoutDashboard, ListVideo, LogOut, RotateCcw, Send, Users, UsersRound } from "lucide-react";
+import { CheckCheck, Clapperboard, FileUp, Film, LayoutDashboard, ListVideo, LogOut, Moon, RotateCcw, Sun, Send, Users, UsersRound } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { canManage, isAdmin, type Me } from "@/lib/auth";
 
@@ -85,10 +86,27 @@ export function AppSidebar({ me }: { me: Me }) {
         </div>
         <SidebarMenu>
           <SidebarMenuItem>
+            <ThemeToggle />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton onClick={signOut} tooltip="Sign out"><LogOut className="h-4 w-4" /><span>Sign out</span></SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => { setDark(localStorage.getItem("theme") === "dark"); }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
+  const flip = () => { const n = !dark; setDark(n); localStorage.setItem("theme", n ? "dark" : "light"); };
+  return (
+    <SidebarMenuButton onClick={flip} tooltip={dark ? "Light mode" : "Dark mode"}>
+      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}<span>{dark ? "Light mode" : "Dark mode"}</span>
+    </SidebarMenuButton>
   );
 }
