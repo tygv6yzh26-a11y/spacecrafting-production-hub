@@ -118,11 +118,27 @@ export function addDays(iso: string, days: number): string {
   return toISODate(new Date(y, m - 1, d + days));
 }
 
-/** Spreadsheet convention: "Deliver by <shoot + 3 days> no later than 5PM". */
+/** Team rule: deliver 3 business days after the shoot (weekends skipped), by 5PM. */
 export const DELIVERY_OFFSET_DAYS = 3;
 
+export function addBusinessDays(iso: string, days: number): string {
+  let cur = iso;
+  let left = days;
+  while (left > 0) {
+    cur = addDays(cur, 1);
+    const [y = 0, m = 1, d = 1] = cur.split("-").map(Number);
+    const dow = new Date(y, m - 1, d).getDay();
+    if (dow !== 0 && dow !== 6) left--;
+  }
+  return cur;
+}
+
+export function defaultDueDate(shootISO: string): string {
+  return addBusinessDays(shootISO, DELIVERY_OFFSET_DAYS);
+}
+
 export function defaultDeliveryText(shootISO: string): string {
-  const due = addDays(shootISO, DELIVERY_OFFSET_DAYS);
+  const due = defaultDueDate(shootISO);
   const [y, m, d] = due.split("-");
   return `Deliver by ${m}/${d}/${y} no later than 5PM`;
 }
@@ -136,7 +152,7 @@ export function parseDeliveryDate(text: string | null | undefined, shootISO?: st
     const y = yRaw.length === 2 ? 2000 + Number(yRaw) : Number(yRaw);
     return toISODate(new Date(y, Number(m) - 1, Number(d)));
   }
-  if (shootISO) return addDays(shootISO, DELIVERY_OFFSET_DAYS);
+  if (shootISO) return defaultDueDate(shootISO);
   return null;
 }
 
