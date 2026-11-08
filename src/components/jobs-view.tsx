@@ -435,7 +435,7 @@ function Board({ jobs, today, onOpen }: { jobs: Job[]; today: string; onOpen: (j
                   <div className="truncate text-muted-foreground">{[departmentLabel(j.department), j.category, j.client].filter(Boolean).join(" · ")}</div>
                   <div className="flex items-center justify-between gap-1">
                     <span className={cn(t === "overdue" && "font-medium text-overdue")}>{formatDate(j.due_date)}</span>
-                    <TimingBadge job={j} today={today} />
+                    <TimingBadge timing={t} />
                   </div>
                   <div className="flex items-center justify-between gap-1">
                     <EditorSelect job={j} />
