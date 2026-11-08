@@ -90,9 +90,11 @@ export function PreviewButton({ job }: { job: Job }) {
 }
 
 export function JobLinks({ job }: { job: Job }) {
+  const searchQuery = job.address || job.client || job.order_number;
   const links = [
     { href: job.calendar_url, label: "Shoot calendar", Icon: CalendarDays },
     { href: job.address_url, label: "Tour / listing", Icon: MapPin },
+    { href: dropboxSearchUrl(searchQuery), label: "Search footage in Dropbox", Icon: FolderSearch },
     { href: firstUrl(job.deliverable_links), label: "Deliverable", Icon: Film },
   ].filter((l) => l.href);
   if (!links.length) return null;
