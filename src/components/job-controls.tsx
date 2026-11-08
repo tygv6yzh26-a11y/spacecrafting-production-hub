@@ -102,7 +102,7 @@ export function JobLinks({ job }: { job: Job }) {
     <div className="flex items-center gap-0.5" onClick={stop}>
       <PreviewButton job={job} />
       {links.map(({ href, label, Icon }) => (
-        <a key={label} href={href!} target="_blank" rel="noreferrer" title={label} aria-label={label} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-primary">
+        <a key={label} href={href!} target="_blank" rel="noopener" title={label} aria-label={label} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-primary">
           <Icon className="h-3.5 w-3.5" />
         </a>
       ))}
