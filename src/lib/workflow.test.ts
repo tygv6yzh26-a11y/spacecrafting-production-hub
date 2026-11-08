@@ -10,7 +10,7 @@ describe("workflow rules", () => {
     expect(parseDeliveryDate("10/09/2026-10/12/2026")).toBe("2026-10-12");
   });
   it("falls back to shoot + 3 days when the text has no date", () => {
-    expect(parseDeliveryDate("uploading", "2026-10-30")).toBe("2026-11-02");
+    expect(parseDeliveryDate("uploading", "2026-10-30")).toBe("2026-11-04");
   });
   it("footage-only status variants map to the shared dropdown value", () => {
     expect(normalizeStatus("Waiting on footage to be uploaded", "SVV")).toBe("Waiting on photos/footage to be uploaded");
@@ -48,7 +48,7 @@ import { isRush, buildBriefing } from "./workflow";
 describe("rush + briefing", () => {
   it("flags deadlines tighter than shoot + 3 days as rush", () => {
     expect(isRush({ status: "Editing", shoot_date: "2026-11-06", due_date: "2026-11-07" })).toBe(true);
-    expect(isRush({ status: "Editing", shoot_date: "2026-11-06", due_date: "2026-11-09" })).toBe(false);
+    expect(isRush({ status: "Editing", shoot_date: "2026-11-06", due_date: "2026-11-11" })).toBe(false);
     expect(isRush({ status: "Delivered", shoot_date: "2026-11-06", due_date: "2026-11-07" })).toBe(false);
   });
   it("lists overdue and unassigned jobs in the briefing", () => {
@@ -58,5 +58,16 @@ describe("rush + briefing", () => {
     ], "2026-11-07", "Sat Nov 7");
     expect(b).toContain("OVERDUE (1):\n• 1 Lake Ave — Beau");
     expect(b).toContain("UNASSIGNED (1):\n• 2 Grand Ave — Unassigned");
+  });
+});
+
+describe("3 business day deadline", () => {
+  it("skips weekends", async () => {
+    const { defaultDueDate } = await import("./workflow");
+    expect(defaultDueDate("2026-11-02")).toBe("2026-11-05"); // Mon -> Thu
+    expect(defaultDueDate("2026-11-04")).toBe("2026-11-09"); // Wed -> Mon
+    expect(defaultDueDate("2026-11-06")).toBe("2026-11-11"); // Fri -> Wed
+    expect(defaultDueDate("2026-11-07")).toBe("2026-11-11"); // Sat -> Wed
+    expect(defaultDueDate("2026-11-08")).toBe("2026-11-11"); // Sun -> Wed
   });
 });

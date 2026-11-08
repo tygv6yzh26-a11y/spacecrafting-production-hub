@@ -226,7 +226,7 @@ export type PresetKey = (typeof PRESETS)[number]["key"];
 /** Rush: active job whose deadline is tighter than the standard shoot + 3 day turnaround. */
 export function isRush(job: { status: string | null; shoot_date: string | null; due_date: string | null }): boolean {
   if (!job.shoot_date || !job.due_date || isClosed(job.status)) return false;
-  return daysUntil(job.due_date, job.shoot_date) < DELIVERY_OFFSET_DAYS;
+  return job.due_date < defaultDueDate(job.shoot_date);
 }
 
 /** Plain-text morning briefing for pasting into Slack/email. */
