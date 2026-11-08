@@ -250,16 +250,36 @@ function Stat({ label, value, highlight }: { label: string; value: number; highl
   );
 }
 
-/** One-click cleanup: mark open jobs due before this month as Delivered. */
+/** Cleanup: mark open jobs in a chosen deadline range as Delivered. */
 function ArchiveOldJobs() {
   const { data: jobs } = useSuspenseQuery(jobsQuery);
   const qc = useQueryClient();
+  const today = todayISO();
+  const monthStart = (offset: number) => {
+    const d = new Date(`${today.slice(0, 8)}01T12:00:00`);
+    d.setMonth(d.getMonth() + offset);
+    return d.toISOString().slice(0, 10);
+  };
+  const minus = (n: number) => { const d = new Date(`${today}T12:00:00`); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  const presets = [
+    { label: "Before this month", to: monthStart(0) },
+    { label: "Before last month", to: monthStart(-1) },
+    { label: "Older than 30 days", to: minus(30) },
+    { label: "Older than 60 days", to: minus(60) },
+    { label: "Older than 90 days", to: minus(90) },
+  ];
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState(presets[0]!.to); // exclusive upper bound
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const cutoff = todayISO().slice(0, 8) + "01";
-  const monthName = new Date(`${cutoff}T12:00:00`).toLocaleDateString("en-US", { month: "long" });
-  const stale = jobs.filter((j) => !isClosed(j.status) && j.due_date && j.due_date < cutoff);
-  if (stale.length === 0) return null;
+  const [showList, setShowList] = useState(false);
+  const stale = useMemo(
+    () => jobs.filter((j) => !isClosed(j.status) && j.due_date && j.due_date < to && (!from || j.due_date >= from)),
+    [jobs, from, to],
+  );
+  const openCount = jobs.filter((j) => !isClosed(j.status)).length;
+  if (openCount === 0) return null;
+  const rangeLabel = `${from ? `from ${formatDate(from)} ` : ""}before ${formatDate(to)}`;
   const run = async () => {
     setBusy(true);
     const ids = stale.map((j) => j.id);
@@ -272,20 +292,53 @@ function ArchiveOldJobs() {
     setBusy(false);
     setOpen(false);
     if (failed) toast.error(`${failed} jobs couldn't be updated`);
-    else toast.success(`${ids.length} older jobs marked Delivered`);
+    else toast.success(`${ids.length} jobs marked Delivered`);
   };
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-warning bg-warning-soft p-4 shadow-card">
-      <div className="flex-1 text-sm">
-        <div className="font-medium">{stale.length} jobs due before {monthName} are still open</div>
-        <div className="text-xs text-muted-foreground">They inflate your overdue count. Mark them all Delivered if they're actually done.</div>
+    <div className="space-y-3 rounded-lg border border-warning bg-warning-soft p-4 shadow-card">
+      <div>
+        <div className="font-medium">Clear old open jobs</div>
+        <div className="text-xs text-muted-foreground">Pick a deadline range. Open jobs in that range get marked Delivered so they stop counting as overdue.</div>
       </div>
-      <Button variant="outline" onClick={() => setOpen(true)}>Mark as Delivered</Button>
+      <div className="flex flex-wrap gap-1.5">
+        {presets.map((p) => (
+          <button key={p.label} onClick={() => { setFrom(""); setTo(p.to); }}
+            className={`rounded-full border px-3 py-1 text-xs ${!from && to === p.to ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{p.label}</button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span>Deadline from</span>
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 rounded-md border bg-card px-2" />
+        <span>up to (not including)</span>
+        <input type="date" value={to} onChange={(e) => e.target.value && setTo(e.target.value)} className="h-8 rounded-md border bg-card px-2" />
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <button className="text-sm font-medium" onClick={() => setShowList(!showList)}>
+          {showList ? "▾" : "▸"} {stale.length} open jobs {rangeLabel}
+        </button>
+        <Button variant="outline" size="sm" className="ml-auto" disabled={!stale.length} onClick={() => setOpen(true)}>Mark as Delivered</Button>
+      </div>
+      {showList && stale.length > 0 && (
+        <div className="max-h-64 overflow-y-auto rounded border bg-card">
+          <table className="w-full text-xs">
+            <tbody>
+              {stale.map((j) => (
+                <tr key={j.id} className="border-b last:border-0">
+                  <td className="whitespace-nowrap px-2 py-1">{formatDate(j.due_date)}</td>
+                  <td className="px-2 py-1">{departmentLabel(j.department)}</td>
+                  <td className="px-2 py-1">{j.address ?? j.project_name}</td>
+                  <td className="px-2 py-1"><StatusBadge status={j.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mark {stale.length} older jobs as Delivered?</AlertDialogTitle>
-            <AlertDialogDescription>Every job due before {monthName} 1 that isn't delivered or canceled will be set to Delivered. Jobs due this month are not touched.</AlertDialogDescription>
+            <AlertDialogTitle>Mark {stale.length} jobs as Delivered?</AlertDialogTitle>
+            <AlertDialogDescription>Every open job with a deadline {rangeLabel} will be set to Delivered. Jobs outside that range are not touched.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>

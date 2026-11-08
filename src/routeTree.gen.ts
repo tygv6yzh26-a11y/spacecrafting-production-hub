@@ -22,6 +22,7 @@ import { Route as AuthenticatedQcRouteImport } from './routes/_authenticated/qc'
 import { Route as AuthenticatedRevisionsRouteImport } from './routes/_authenticated/revisions'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedWorkloadRouteImport } from './routes/_authenticated/workload'
+import { Route as ApiPublicJobsIngestRouteImport } from './routes/api/public/jobs/ingest'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -87,6 +88,11 @@ const AuthenticatedWorkloadRoute = AuthenticatedWorkloadRouteImport.update({
   path: '/workload',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicJobsIngestRoute = ApiPublicJobsIngestRouteImport.update({
+  id: '/api/public/jobs/ingest',
+  path: '/api/public/jobs/ingest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/revisions': typeof AuthenticatedRevisionsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/workload': typeof AuthenticatedWorkloadRoute
+  '/api/public/jobs/ingest': typeof ApiPublicJobsIngestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/revisions': typeof AuthenticatedRevisionsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/workload': typeof AuthenticatedWorkloadRoute
+  '/api/public/jobs/ingest': typeof ApiPublicJobsIngestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/_authenticated/revisions': typeof AuthenticatedRevisionsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/workload': typeof AuthenticatedWorkloadRoute
+  '/api/public/jobs/ingest': typeof ApiPublicJobsIngestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/revisions'
     | '/team'
     | '/workload'
+    | '/api/public/jobs/ingest'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/revisions'
     | '/team'
     | '/workload'
+    | '/api/public/jobs/ingest'
   id:
     | '__root__'
     | '/'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/_authenticated/revisions'
     | '/_authenticated/team'
     | '/_authenticated/workload'
+    | '/api/public/jobs/ingest'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -183,6 +195,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicJobsIngestRoute: typeof ApiPublicJobsIngestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkloadRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/jobs/ingest': {
+      id: '/api/public/jobs/ingest'
+      path: '/api/public/jobs/ingest'
+      fullPath: '/api/public/jobs/ingest'
+      preLoaderRoute: typeof ApiPublicJobsIngestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -313,6 +333,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicJobsIngestRoute: ApiPublicJobsIngestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

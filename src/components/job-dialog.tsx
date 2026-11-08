@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet as Dialog, SheetContent as DialogContent, SheetFooter as DialogFooter, SheetHeader as DialogHeader, SheetTitle as DialogTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -120,7 +120,7 @@ export function JobDialog({ open, onOpenChange, job }: { open: boolean; onOpenCh
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent side="right" className="w-full overflow-y-auto p-6 sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{job ? "Edit job" : "New job"}</DialogTitle>
         </DialogHeader>
