@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Columns3, Rows3, Rows4, Table2, ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge, TimingBadge } from "@/components/status-badge";
 import { JobDialog } from "@/components/job-dialog";
-import { JobLinks, NotesCell, RushBadge } from "@/components/job-controls";
+import { EditorSelect, JobLinks, NotesCell, RushBadge } from "@/components/job-controls";
 import { cn } from "@/lib/utils";
 import { editorsQuery, formatDate, jobsQuery, todayISO, useDeleteJob, useUpdateJob, type Job } from "@/lib/jobs";
 import { meQuery, canManage } from "@/lib/auth";
@@ -69,6 +69,8 @@ export function JobsView({
   const [preset, setPreset] = useState<PresetKey>("active");
   const [timingPill, setTimingPill] = useState<"overdue" | "due_today" | null>(null);
   const [urgentFirst, setUrgentFirst] = useState(cockpit);
+  const [view, setView] = useState<"table" | "board">("table");
+  const [compact, setCompact] = useState(false);
 
   const presetStages = cockpit ? (PRESETS.find((p) => p.key === preset)?.stages as readonly Stage[] | null) : null;
   const scoped = useMemo(() => {
@@ -226,10 +228,22 @@ export function JobsView({
             </button>
           )}
           <span className="ml-auto">{filtered.length.toLocaleString()} jobs</span>
+          <div className="flex items-center rounded-md border">
+            <button title="Table view" aria-label="Table view" onClick={() => setView("table")} className={cn("p-1.5", view === "table" && "bg-muted text-foreground")}><Table2 className="h-3.5 w-3.5" /></button>
+            <button title="Board view" aria-label="Board view" onClick={() => setView("board")} className={cn("p-1.5", view === "board" && "bg-muted text-foreground")}><Columns3 className="h-3.5 w-3.5" /></button>
+          </div>
+          {view === "table" && (
+            <button title={compact ? "Comfortable rows" : "Compact rows"} aria-label="Toggle row density" onClick={() => setCompact(!compact)} className="rounded-md border p-1.5 hover:text-foreground">
+              {compact ? <Rows3 className="h-3.5 w-3.5" /> : <Rows4 className="h-3.5 w-3.5" />}
+            </button>
+          )}
         </div>
 
+        {view === "board" ? (
+          <Board jobs={filtered} today={today} onOpen={(j) => { setEditing(j); setDialogOpen(true); }} />
+        ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1300px] text-sm">
+          <table className={cn("w-full min-w-[1300px] text-sm", compact && "text-xs [&_td]:!py-0.5 [&_td_.text-xs]:leading-tight")}>
             <thead className="sticky top-0 bg-muted/60 text-xs text-muted-foreground">
               <tr className="border-b">
                 <SortHead k="due_date">Deadline</SortHead>
@@ -336,7 +350,8 @@ export function JobsView({
             </tbody>
           </table>
         </div>
-        {pages > 1 && (
+        )}
+        {view === "table" && pages > 1 && (
           <div className="flex items-center justify-end gap-2 border-t px-3 py-2 text-xs text-muted-foreground">
             Page {page + 1} of {pages}
             <Button size="sm" variant="outline" className="h-7" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
@@ -395,3 +410,44 @@ function DateRange({ label, from, to, setFrom, setTo }: { label: string; from: s
 }
 
 export { STAGE_META };
+
+function Board({ jobs, today, onOpen }: { jobs: Job[]; today: string; onOpen: (j: Job) => void }) {
+  const cols = (Object.keys(STAGE_META) as Stage[]).filter((s) => s !== "canceled");
+  const grouped = cols.map((s) => ({ s, list: jobs.filter((j) => stageOf(j.status) === s) })).filter((c) => c.list.length || c.s !== "delivered");
+  return (
+    <div className="flex gap-3 overflow-x-auto p-3">
+      {grouped.map(({ s, list }) => (
+        <div key={s} className="flex w-64 shrink-0 flex-col rounded-lg bg-muted/50">
+          <div className="flex items-center justify-between px-3 py-2 text-xs font-medium">
+            <span className={cn("rounded px-1.5 py-0.5", STAGE_META[s].tone)}>{STAGE_META[s].label}</span>
+            <span className="text-muted-foreground">{list.length}</span>
+          </div>
+          <div className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto px-2 pb-2">
+            {list.slice(0, 150).map((j) => {
+              const t = timingOf(j, today);
+              return (
+                <div key={j.id} role="button" tabIndex={0} onClick={() => onOpen(j)} onKeyDown={(e) => e.key === "Enter" && onOpen(j)}
+                  className={cn("cursor-pointer space-y-1.5 rounded-md border bg-card p-2.5 text-xs shadow-card hover:border-primary/50", t === "overdue" && "border-l-2 border-l-overdue")}>
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="line-clamp-2 font-medium text-foreground">{j.address ?? j.project_name ?? "—"}</div>
+                    <RushBadge job={j} />
+                  </div>
+                  <div className="truncate text-muted-foreground">{[departmentLabel(j.department), j.category, j.client].filter(Boolean).join(" · ")}</div>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={cn(t === "overdue" && "font-medium text-overdue")}>{formatDate(j.due_date)}</span>
+                    <TimingBadge job={j} today={today} />
+                  </div>
+                  <div className="flex items-center justify-between gap-1">
+                    <EditorSelect job={j} />
+                    <JobLinks job={j} />
+                  </div>
+                </div>
+              );
+            })}
+            {list.length === 0 && <div className="px-1 py-6 text-center text-muted-foreground">Nothing here</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
