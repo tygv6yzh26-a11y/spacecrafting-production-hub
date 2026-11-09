@@ -249,7 +249,7 @@ export function buildBriefing(
     list.forEach((j) => out.push(line(j, extra(j))));
     out.push("");
   };
-  section("OVERDUE", overdue, (j) => `due ${j.due_date}`);
+  void overdue;
   section("DELIVERING TODAY", today, (j) => j.status);
   section("UNASSIGNED", unassigned, (j) => `shot ${j.shoot_date ?? "?"}`);
   section("WAITING ON FOOTAGE", footage, (j) => `shot ${j.shoot_date ?? "?"}`);
