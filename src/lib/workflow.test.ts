@@ -56,7 +56,7 @@ describe("rush + briefing", () => {
       { status: "Editing", due_date: "2026-11-05", shoot_date: "2026-11-02", editor: "Beau", address: "1 Lake Ave", project_name: null },
       { status: "Ready to edit", due_date: "2026-11-10", shoot_date: "2026-11-07", editor: null, address: "2 Grand Ave", project_name: null },
     ], "2026-11-07", "Sat Nov 7");
-    expect(b).toContain("OVERDUE (1):\n• 1 Lake Ave — Beau");
+    expect(b).not.toContain("OVERDUE");
     expect(b).toContain("UNASSIGNED (1):\n• 2 Grand Ave — Unassigned");
   });
 });
@@ -70,4 +70,15 @@ describe("3 business day deadline", () => {
     expect(defaultDueDate("2026-11-07")).toBe("2026-11-11"); // Sat -> Wed
     expect(defaultDueDate("2026-11-08")).toBe("2026-11-11"); // Sun -> Wed
   });
+});
+
+import { recentShootDates, capacityLevel } from "./workflow";
+describe("recentShootDates", () => {
+  it("uses yesterday on a Tuesday", () => expect(recentShootDates("2026-11-10")).toEqual(["2026-11-09"]));
+  it("uses Fri–Sun on a Monday", () => expect(recentShootDates("2026-11-09")).toEqual(["2026-11-06", "2026-11-07", "2026-11-08"]));
+});
+describe("capacityLevel", () => {
+  it("2 is light", () => expect(capacityLevel(2)).toBe("light"));
+  it("3 is balanced", () => expect(capacityLevel(3)).toBe("balanced"));
+  it("5 is heavy", () => expect(capacityLevel(5)).toBe("heavy"));
 });

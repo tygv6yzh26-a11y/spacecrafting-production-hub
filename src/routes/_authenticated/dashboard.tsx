@@ -5,37 +5,81 @@ import { toast } from "sonner";
 import { EditorSelect, JobLinks, NextActionButtons, RushBadge } from "@/components/job-controls";
 import { JobDialog } from "@/components/job-dialog";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CalendarClock, ClipboardCopy, CheckCheck, Clock, Film, Package, RotateCcw, Upload } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CalendarCheck, CheckCheck, ClipboardCopy, Clock, Camera, Film, RotateCcw, Upload, StickyNote, UserX } from "lucide-react";
 import { jobsQuery, todayISO, formatDate, type Job } from "@/lib/jobs";
-import { buildBriefing, STAGE_META, stageOf, timingOf, isClosed, departmentLabel, type Stage } from "@/lib/workflow";
+import { buildBriefing, capacityLevel, departmentLabel, isClosed, recentShootDates, stageOf, timingOf, type CapacityLevel } from "@/lib/workflow";
 import { StatusBadge, TimingBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Spacecrafting Video" }, { name: "description", content: "Morning overview of video production." }] }),
+  head: () => ({
+    meta: [
+      { title: "Morning Dashboard — Spacecrafting Video" },
+      { name: "description", content: "Yesterday's shoots, today's deliveries and editor capacity at a glance." },
+      { property: "og:title", content: "Morning Dashboard — Spacecrafting Video" },
+      { property: "og:description", content: "Yesterday's shoots, today's deliveries and editor capacity at a glance." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   loader: ({ context }) => context.queryClient.ensureQueryData(jobsQuery),
   component: Dashboard,
 });
 
-type AttentionReason = "Overdue" | "Due today" | "At risk" | "Waiting on footage" | "Awaiting QC" | "Needs revision";
-const REASON_ORDER: AttentionReason[] = ["Overdue", "Due today", "At risk", "Needs revision", "Awaiting QC", "Waiting on footage"];
+const CAP_META: Record<CapacityLevel, { label: string; bar: string; text: string }> = {
+  light: { label: "Light", bar: "bg-emerald-500", text: "text-emerald-600" },
+  balanced: { label: "Balanced", bar: "bg-primary", text: "text-primary" },
+  heavy: { label: "Heavy", bar: "bg-amber-500", text: "text-amber-600" },
+};
 
-function attentionReason(j: Job, today: string): AttentionReason | null {
-  const t = timingOf(j, today);
-  if (t === "overdue") return "Overdue";
-  if (t === "due_today") return "Due today";
-  if (t === "at_risk") return "At risk";
-  const s = stageOf(j.status);
-  if (s === "revision") return "Needs revision";
-  if (s === "qc") return "Awaiting QC";
-  if (s === "shoot" && /footage|photos/i.test(j.status)) return "Waiting on footage";
-  return null;
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+
+function JobRow({ j, onOpen, showShoot }: { j: Job; onOpen: (j: Job) => void; showShoot?: boolean }) {
+  return (
+    <li onClick={() => onOpen(j)} className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 text-sm hover:bg-muted/50">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 font-medium">
+          <RushBadge job={j} />
+          <span className="truncate">{j.address ?? j.project_name ?? "Untitled"}</span>
+          {!j.editor && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Unassigned</span>}
+          {j.notes && (
+            <Tooltip>
+              <TooltipTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <StickyNote className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs whitespace-pre-wrap text-xs">{j.notes.slice(0, 500)}</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+        <div className="truncate text-xs text-muted-foreground">
+          {departmentLabel(j.department)} · {j.category} · {j.client ?? "—"}
+          {showShoot && j.photographer && <> · Shot by {j.photographer}</>}
+        </div>
+      </div>
+      <StatusBadge status={j.status} className="hidden max-w-[170px] md:inline-flex" />
+      <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">{formatDate(showShoot ? j.shoot_date : j.due_date)}</span>
+      <div className="flex w-full items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+        <JobLinks job={j} />
+        <NextActionButtons job={j} />
+        <EditorSelect job={j} />
+      </div>
+    </li>
+  );
 }
 
 function Dashboard() {
   const { data: jobs } = useSuspenseQuery(jobsQuery);
   const today = todayISO();
   const [open, setOpen] = useState<Job | null>(null);
+  const [focusEditor, setFocusEditor] = useState<string | null>(null);
+  const monthPrefix = today.slice(0, 7);
+  const recentDates = recentShootDates(today);
+  const isMonday = recentDates.length > 1;
+
   const copyBriefing = async () => {
     const label = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
     try {
@@ -45,57 +89,52 @@ function Dashboard() {
       toast.error("Couldn't copy to clipboard");
     }
   };
-  const monthPrefix = today.slice(0, 7);
 
-  const stats = useMemo(() => {
+  const d = useMemo(() => {
     const active = jobs.filter((j) => !isClosed(j.status));
+    const byDue = (a: Job, b: Job) => (a.due_date ?? "9").localeCompare(b.due_date ?? "9");
+    const recent = jobs
+      .filter((j) => j.shoot_date && recentDates.includes(j.shoot_date) && stageOf(j.status) !== "canceled")
+      .sort((a, b) => Number(!!a.editor) - Number(!!b.editor) || (b.shoot_date ?? "").localeCompare(a.shoot_date ?? ""));
     return {
-      active: active.length,
-      editing: jobs.filter((j) => stageOf(j.status) === "editing").length,
-      qc: jobs.filter((j) => stageOf(j.status) === "qc").length,
-      revision: jobs.filter((j) => stageOf(j.status) === "revision").length,
-      overdue: jobs.filter((j) => timingOf(j, today) === "overdue").length,
-      delivered: jobs.filter((j) => stageOf(j.status) === "delivered" && ((j.due_date ?? j.shoot_date ?? "").startsWith(monthPrefix))).length,
+      active,
+      recent,
+      dueToday: active.filter((j) => timingOf(j, today) === "due_today").sort(byDue),
+      qc: active.filter((j) => stageOf(j.status) === "qc").sort(byDue),
+      revision: active.filter((j) => stageOf(j.status) === "revision").sort(byDue),
+      editing: active.filter((j) => stageOf(j.status) === "editing").length,
+      unassigned: recent.filter((j) => !j.editor && !isClosed(j.status)).length,
+      delivered: jobs.filter((j) => stageOf(j.status) === "delivered" && (j.due_date ?? j.shoot_date ?? "").startsWith(monthPrefix)).length,
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs, today, monthPrefix]);
-
-  const attention = useMemo(() => {
-    const rows = jobs.map((j) => ({ j, r: attentionReason(j, today) })).filter((x): x is { j: Job; r: AttentionReason } => !!x.r);
-    rows.sort((a, b) => REASON_ORDER.indexOf(a.r) - REASON_ORDER.indexOf(b.r) || (a.j.due_date ?? "9").localeCompare(b.j.due_date ?? "9"));
-    return rows;
-  }, [jobs, today]);
-
-  const byStage = useMemo(() => {
-    const order: Stage[] = ["shoot", "ready", "editing", "client", "qc", "revision", "qc_complete"];
-    const active = jobs.filter((j) => !isClosed(j.status));
-    return order.map((s) => ({ stage: s, count: active.filter((j) => stageOf(j.status) === s).length }));
-  }, [jobs]);
-  const maxStage = Math.max(1, ...byStage.map((s) => s.count));
-
-  const byDept = useMemo(() => {
-    const m = new Map<string, number>();
-    jobs.filter((j) => !isClosed(j.status)).forEach((j) => m.set(j.department, (m.get(j.department) ?? 0) + 1));
-    return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [jobs]);
 
   const editors = useMemo(() => {
     const m = new Map<string, Job[]>();
-    jobs.filter((j) => !isClosed(j.status)).forEach((j) => {
-      const k = j.editor ?? "Unassigned";
-      m.set(k, [...(m.get(k) ?? []), j]);
-    });
+    d.active.filter((j) => j.editor).forEach((j) => m.set(j.editor!, [...(m.get(j.editor!) ?? []), j]));
     return [...m.entries()]
-      .map(([name, list]) => ({ name, list: list.sort((a, b) => (a.due_date ?? "9").localeCompare(b.due_date ?? "9")), overdue: list.filter((j) => timingOf(j, today) === "overdue").length }))
-      .sort((a, b) => b.list.length - a.list.length);
-  }, [jobs, today]);
+      .map(([name, list]) => {
+        const upcoming = list.filter((j) => j.due_date && j.due_date >= today).sort((a, b) => a.due_date!.localeCompare(b.due_date!));
+        return { name, list, next: upcoming[0]?.due_date ?? null, level: capacityLevel(list.length) };
+      })
+      .sort((a, b) => a.list.length - b.list.length);
+  }, [d.active, today]);
+
+  const horizon = [
+    { key: "today", title: "Due today", icon: CalendarCheck, list: d.dueToday },
+    { key: "qc", title: "Awaiting your QC", icon: CheckCheck, list: d.qc },
+    { key: "rev", title: "Needs revision", icon: RotateCcw, list: d.revision },
+  ];
+  const [tab, setTab] = useState("today");
+  const current = horizon.find((h) => h.key === tab)!;
 
   const cards = [
-    { label: "Active jobs", value: stats.active, icon: Package, to: "/jobs" as const },
-    { label: "Being edited", value: stats.editing, icon: Film, to: "/editing" as const },
-    { label: "Awaiting QC", value: stats.qc, icon: CheckCheck, to: "/qc" as const },
-    { label: "Needs revisions", value: stats.revision, icon: RotateCcw, to: "/revisions" as const },
-    { label: "Overdue", value: stats.overdue, icon: AlertTriangle, to: "/jobs" as const, danger: true },
-    { label: "Delivered this month", value: stats.delivered, icon: Upload, to: "/delivery" as const },
+    { label: isMonday ? "Weekend shoots" : "Yesterday's shoots", value: d.recent.length, icon: Camera, to: "/jobs" as const },
+    { label: "Due today", value: d.dueToday.length, icon: CalendarCheck, to: "/delivery" as const },
+    { label: "In editing", value: d.editing, icon: Film, to: "/editing" as const },
+    { label: "Awaiting QC", value: d.qc.length, icon: CheckCheck, to: "/qc" as const },
+    { label: "Needs revision", value: d.revision.length, icon: RotateCcw, to: "/revisions" as const },
+    { label: "Delivered this month", value: d.delivered, icon: Upload, to: "/delivery" as const },
   ];
 
   if (jobs.length === 0) {
@@ -111,107 +150,122 @@ function Dashboard() {
     );
   }
 
+  const dayLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const focused = focusEditor ? editors.find((e) => e.name === focusEditor) : null;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Morning Overview</h1>
-          <p className="text-sm text-muted-foreground">Where every video job stands right now. Click a job to edit it.</p>
+      {/* Morning header status bar */}
+      <div className="rounded-xl border bg-card p-5 shadow-card">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{dayLabel}</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{greeting()}, Corey</h1>
+          </div>
+          <Button variant="outline" size="sm" onClick={copyBriefing}><ClipboardCopy className="h-4 w-4" /> Copy morning briefing</Button>
         </div>
-        <Button variant="outline" size="sm" onClick={copyBriefing}><ClipboardCopy className="h-4 w-4" /> Copy morning briefing</Button>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">{d.recent.length} {isMonday ? "weekend" : "yesterday"} shoots</span>
+          <span className="rounded-full bg-muted px-3 py-1 font-medium">{d.dueToday.length} due today</span>
+          <span className="rounded-full bg-muted px-3 py-1 font-medium">{d.qc.length} awaiting your QC</span>
+          <span className={cn("flex items-center gap-1 rounded-full px-3 py-1 font-medium", d.unassigned ? "bg-amber-100 text-amber-700" : "bg-muted")}>
+            <UserX className="h-3 w-3" /> {d.unassigned} unassigned
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {cards.map((c) => (
-          <Link key={c.label} to={c.to} className={cn("rounded-lg border bg-card p-4 shadow-card transition-colors hover:border-primary/40", c.danger && c.value > 0 && "border-overdue/40 bg-overdue-soft")}>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              {c.label}
-              <c.icon className={cn("h-4 w-4", c.danger && c.value > 0 && "text-overdue")} />
-            </div>
-            <div className={cn("mt-2 text-3xl font-semibold tabular-nums", c.danger && c.value > 0 && "text-overdue")}>{c.value}</div>
+          <Link key={c.label} to={c.to} className="rounded-lg border bg-card p-4 shadow-card transition-colors hover:border-primary/40">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">{c.label}<c.icon className="h-4 w-4" /></div>
+            <div className="mt-2 text-3xl font-semibold tabular-nums">{c.value}</div>
           </Link>
         ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-5">
-        <section className="rounded-lg border bg-card shadow-card xl:col-span-3">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <div className="flex items-center gap-2">
-              <CalendarClock className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-semibold">Today's Attention</h2>
-            </div>
-            <span className="text-xs text-muted-foreground">{attention.length} jobs</span>
-          </div>
-          <div className="flex flex-wrap gap-2 border-b px-4 py-2 text-xs">
-            {REASON_ORDER.map((r) => {
-              const n = attention.filter((a) => a.r === r).length;
-              return <span key={r} className={cn("rounded-full border px-2 py-0.5", n === 0 && "opacity-40", r === "Overdue" && n > 0 && "border-overdue text-overdue")}>{r} · {n}</span>;
-            })}
-          </div>
-          <div className="max-h-[520px] overflow-y-auto">
-            {attention.length === 0 && <p className="px-4 py-10 text-center text-sm text-muted-foreground">Nothing needs attention. 🎬</p>}
-            <ul className="divide-y">
-              {attention.slice(0, 80).map(({ j, r }) => (
-                <li key={j.id} onClick={() => setOpen(j)} className={cn("flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 text-sm hover:bg-muted/50", r === "Overdue" && "bg-overdue-soft")}>
-                  <span className={cn("w-24 shrink-0 text-xs font-medium", r === "Overdue" ? "text-overdue" : "text-muted-foreground")}>{r}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 truncate font-medium"><RushBadge job={j} /><span className="truncate">{j.address ?? j.project_name}</span></div>
-                    <div className="truncate text-xs text-muted-foreground">{departmentLabel(j.department)} · {j.category} · {j.client}</div>
-                  </div>
-                  <StatusBadge status={j.status} className="hidden max-w-[160px] md:inline-flex" />
-                  <span className="w-16 shrink-0 text-right text-xs">{formatDate(j.due_date)}</span>
-                  <div className="flex w-full items-center justify-end gap-1.5 pl-[108px]">
-                    <JobLinks job={j} />
-                    <NextActionButtons job={j} />
-                    <EditorSelect job={j} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <div className="space-y-6 xl:col-span-2">
-          <section className="rounded-lg border bg-card p-4 shadow-card">
-            <h2 className="text-sm font-semibold">Production Overview</h2>
-            <p className="text-xs text-muted-foreground">Active jobs by workflow stage</p>
-            <div className="mt-4 space-y-2.5">
-              {byStage.map(({ stage, count }) => (
-                <div key={stage} className="flex items-center gap-3 text-xs">
-                  <span className="w-36 shrink-0 text-muted-foreground">{STAGE_META[stage].label}</span>
-                  <div className="h-5 flex-1 overflow-hidden rounded bg-muted">
-                    <div className={cn("h-full rounded", STAGE_META[stage].tone)} style={{ width: `${(count / maxStage) * 100}%`, minWidth: count ? 6 : 0 }} />
-                  </div>
-                  <span className="w-8 text-right font-medium tabular-nums">{count}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2 border-t pt-3 text-xs">
-              {byDept.map(([d, n]) => <span key={d} className="rounded border px-2 py-0.5">{departmentLabel(d)} <b className="tabular-nums">{n}</b></span>)}
-            </div>
-          </section>
-
+        <div className="space-y-6 xl:col-span-3">
+          {/* Yesterday's shoots */}
           <section className="rounded-lg border bg-card shadow-card">
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <h2 className="text-sm font-semibold">Editor Workload</h2>
-              <Link to="/workload" className="text-xs text-primary hover:underline">View all</Link>
+              <div className="flex items-center gap-2">
+                <Camera className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold">{isMonday ? "Weekend shoots (Fri–Sun)" : "Yesterday's shoots"}</h2>
+              </div>
+              <span className="text-xs text-muted-foreground">{recentDates.map((x) => formatDate(x)).join(", ")}</span>
             </div>
-            <ul className="divide-y">
-              {editors.slice(0, 8).map((e) => (
-                <li key={e.name}>
-                  <Link to="/workload" hash={`editor-${e.name}`} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted/50">
-                  <span className="w-28 truncate font-medium">{e.name}</span>
-                  <span className="text-xs text-muted-foreground">{e.list.length} active</span>
-                  {e.overdue > 0 && <span className="text-xs font-medium text-overdue">{e.overdue} overdue</span>}
-                  <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" /> next {formatDate(e.list.find((j) => j.due_date)?.due_date)}
-                  </span>
-                  </Link>
-                </li>
+            {d.recent.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-muted-foreground">No shoots on {isMonday ? "Fri–Sun" : "yesterday"}.</p>
+            ) : (
+              <ul className="max-h-[560px] divide-y overflow-y-auto">
+                {d.recent.map((j) => <JobRow key={j.id} j={j} onOpen={setOpen} showShoot />)}
+              </ul>
+            )}
+          </section>
+
+          {/* Action horizon */}
+          <section className="rounded-lg border bg-card shadow-card">
+            <div className="flex flex-wrap gap-1 border-b px-2 py-2">
+              {horizon.map((h) => (
+                <button key={h.key} onClick={() => setTab(h.key)} className={cn("flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium", tab === h.key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted")}>
+                  <h.icon className="h-3.5 w-3.5" /> {h.title} <span className="tabular-nums">· {h.list.length}</span>
+                </button>
               ))}
-            </ul>
+            </div>
+            {current.list.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">Nothing here right now.</p>
+            ) : (
+              <ul className="max-h-[480px] divide-y overflow-y-auto">
+                {current.list.slice(0, 60).map((j) => <JobRow key={j.id} j={j} onOpen={setOpen} />)}
+              </ul>
+            )}
           </section>
         </div>
+
+        {/* Editor capacity */}
+        <section className="h-fit rounded-lg border bg-card shadow-card xl:col-span-2">
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <div>
+              <h2 className="text-sm font-semibold">Editor capacity</h2>
+              <p className="text-xs text-muted-foreground">Lightest load first — click to see their jobs</p>
+            </div>
+            <Link to="/workload" className="text-xs text-primary hover:underline">Workload</Link>
+          </div>
+          <ul className="divide-y">
+            {editors.map((e) => {
+              const meta = CAP_META[e.level];
+              return (
+                <li key={e.name}>
+                  <button onClick={() => setFocusEditor(focusEditor === e.name ? null : e.name)} className={cn("w-full px-4 py-3 text-left hover:bg-muted/50", focusEditor === e.name && "bg-muted/60")}>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">{e.name}</span>
+                      <span className={cn("text-xs font-medium", meta.text)}>{meta.label}</span>
+                      <span className="ml-auto text-xs tabular-nums text-muted-foreground">{e.list.length} active</span>
+                    </div>
+                    <div className="mt-2 flex gap-1">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className={cn("h-2 flex-1 rounded-full", i < e.list.length ? meta.bar : "bg-muted")} />
+                      ))}
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" /> Next due {e.next ? formatDate(e.next) : "—"}
+                    </div>
+                  </button>
+                  {focused?.name === e.name && (
+                    <ul className="divide-y border-t bg-muted/30">
+                      {e.list.map((j) => (
+                        <li key={j.id} onClick={() => setOpen(j)} className="flex cursor-pointer items-center gap-2 px-6 py-2 text-xs hover:bg-muted">
+                          <span className="min-w-0 flex-1 truncate">{j.address ?? j.project_name}</span>
+                          <StatusBadge status={j.status} className="max-w-[130px]" />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       </div>
       <JobDialog open={!!open} onOpenChange={(o) => !o && setOpen(null)} job={open} />
     </div>

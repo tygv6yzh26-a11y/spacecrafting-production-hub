@@ -249,9 +249,24 @@ export function buildBriefing(
     list.forEach((j) => out.push(line(j, extra(j))));
     out.push("");
   };
-  section("OVERDUE", overdue, (j) => `due ${j.due_date}`);
+  void overdue;
   section("DELIVERING TODAY", today, (j) => j.status);
   section("UNASSIGNED", unassigned, (j) => `shot ${j.shoot_date ?? "?"}`);
   section("WAITING ON FOOTAGE", footage, (j) => `shot ${j.shoot_date ?? "?"}`);
   return out.join("\n").trim();
+}
+
+/** Shoot dates that count as "yesterday's shoots": the previous day, or Fri–Sun on a Monday. */
+export function recentShootDates(todayISO: string): string[] {
+  const dow = new Date(`${todayISO}T12:00:00`).getDay();
+  if (dow === 1) return [addDays(todayISO, -3), addDays(todayISO, -2), addDays(todayISO, -1)];
+  return [addDays(todayISO, -1)];
+}
+
+export type CapacityLevel = "light" | "balanced" | "heavy";
+/** Editor load: 1–2 active = light, 3–4 = balanced, 5+ = heavy. */
+export function capacityLevel(active: number): CapacityLevel {
+  if (active >= 5) return "heavy";
+  if (active >= 3) return "balanced";
+  return "light";
 }
