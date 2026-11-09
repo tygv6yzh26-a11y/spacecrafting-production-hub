@@ -14,10 +14,10 @@ export function firstUrl(text: string | null | undefined) {
   return text?.match(/https?:\/\/\S+/)?.[0] ?? null;
 }
 export function dropboxSearchUrl(query: string | null | undefined): string {
-  if (!query) return "https://www.dropbox.com/home";
+  if (!query) return "https://www.dropbox.com/search/work";
   // Grabs street address before city/state (e.g. "5720 Oakview Lane")
   const cleaned = query.replace(/,.*$/, "").trim();
-  return `https://www.dropbox.com/home?query=${encodeURIComponent(cleaned)}`;
+  return `https://www.dropbox.com/search/work?query=${encodeURIComponent(cleaned)}`;
 }
 
 export function EditorSelect({ job, className }: { job: Job; className?: string }) {
