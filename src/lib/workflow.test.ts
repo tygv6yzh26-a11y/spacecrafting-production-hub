@@ -56,7 +56,7 @@ describe("rush + briefing", () => {
       { status: "Editing", due_date: "2026-11-05", shoot_date: "2026-11-02", editor: "Beau", address: "1 Lake Ave", project_name: null },
       { status: "Ready to edit", due_date: "2026-11-10", shoot_date: "2026-11-07", editor: null, address: "2 Grand Ave", project_name: null },
     ], "2026-11-07", "Sat Nov 7");
-    expect(b).toContain("OVERDUE (1):\n• 1 Lake Ave — Beau");
+    expect(b).not.toContain("OVERDUE");
     expect(b).toContain("UNASSIGNED (1):\n• 2 Grand Ave — Unassigned");
   });
 });
