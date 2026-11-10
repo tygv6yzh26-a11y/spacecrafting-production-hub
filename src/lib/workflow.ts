@@ -66,16 +66,16 @@ export type Stage =
   | "delivered"
   | "canceled";
 
-export const STAGE_META: Record<Stage, { label: string; tone: string }> = {
-  shoot: { label: "Shoot / Footage", tone: "stage-shoot" },
-  ready: { label: "Ready to edit", tone: "stage-ready" },
-  editing: { label: "Editing", tone: "stage-editing" },
-  client: { label: "Waiting on client", tone: "stage-client" },
-  qc: { label: "Needs QC", tone: "stage-qc" },
-  qc_complete: { label: "QC complete / Uploaded", tone: "stage-qcdone" },
-  revision: { label: "Revision requested", tone: "stage-revision" },
-  delivered: { label: "Delivered", tone: "stage-delivered" },
-  canceled: { label: "Canceled", tone: "stage-canceled" },
+export const STAGE_META: Record<Stage, { label: string; tone: string; tile: string; accent: string }> = {
+  shoot: { label: "Shoot / Footage", tone: "stage-shoot", tile: "tile-shoot", accent: "accent-shoot" },
+  ready: { label: "Ready to edit", tone: "stage-ready", tile: "tile-ready", accent: "accent-ready" },
+  editing: { label: "Editing", tone: "stage-editing", tile: "tile-editing", accent: "accent-editing" },
+  client: { label: "Waiting on client", tone: "stage-client", tile: "tile-client", accent: "accent-client" },
+  qc: { label: "Needs QC", tone: "stage-qc", tile: "tile-qc", accent: "accent-qc" },
+  qc_complete: { label: "QC complete / Uploaded", tone: "stage-qcdone", tile: "tile-qcdone", accent: "accent-qcdone" },
+  revision: { label: "Revision requested", tone: "stage-revision", tile: "tile-revision", accent: "accent-revision" },
+  delivered: { label: "Delivered", tone: "stage-delivered", tile: "tile-delivered", accent: "accent-delivered" },
+  canceled: { label: "Canceled", tone: "stage-canceled", tile: "tile-canceled", accent: "accent-canceled" },
 };
 
 export function stageOf(status: string | null | undefined): Stage {
@@ -269,4 +269,46 @@ export function capacityLevel(active: number): CapacityLevel {
   if (active >= 5) return "heavy";
   if (active >= 3) return "balanced";
   return "light";
+}
+
+
+/** Monday-style board groups for Production Jobs, in display order. */
+export const BOARD_GROUPS: { key: string; label: string; stages: Stage[]; accent: string }[] = [
+  { key: "intake", label: "Intake · Shoot & Footage", stages: ["shoot", "ready"], accent: "accent-ready" },
+  { key: "editing", label: "In Editing", stages: ["editing", "client"], accent: "accent-editing" },
+  { key: "qc", label: "Awaiting QC", stages: ["qc", "qc_complete"], accent: "accent-qc" },
+  { key: "revision", label: "Needs Revision", stages: ["revision"], accent: "accent-revision" },
+  { key: "delivered", label: "Delivered", stages: ["delivered"], accent: "accent-delivered" },
+  { key: "canceled", label: "Canceled", stages: ["canceled"], accent: "accent-canceled" },
+];
+
+/** Count of jobs per stage, in workflow order, skipping empty stages. */
+export function stageBreakdown(jobs: { status: string | null }[]): { stage: Stage; count: number }[] {
+  const order: Stage[] = ["shoot", "ready", "editing", "client", "qc", "qc_complete", "revision", "delivered", "canceled"];
+  const m = new Map<Stage, number>();
+  jobs.forEach((j) => m.set(stageOf(j.status), (m.get(stageOf(j.status)) ?? 0) + 1));
+  return order.filter((s) => m.get(s)).map((s) => ({ stage: s, count: m.get(s)! }));
+}
+
+export const DELIVERY_CUTOFF_HOUR = 17;
+
+/** "4h 22m until 5 PM cutoff" style label; null once the cutoff has passed. */
+export function cutoffCountdown(now: Date, hour = DELIVERY_CUTOFF_HOUR): string | null {
+  const cut = new Date(now);
+  cut.setHours(hour, 0, 0, 0);
+  const mins = Math.floor((cut.getTime() - now.getTime()) / 60000);
+  if (mins <= 0) return null;
+  const h = Math.floor(mins / 60);
+  return h ? `${h}h ${mins % 60}m` : `${mins}m`;
+}
+
+/** Short color-coded chip for a category/department. */
+export function categoryChip(category: string | null, department: string): { label: string; tone: Stage } {
+  const c = (category ?? "").toLowerCase();
+  if (c.includes("social")) return { label: "Social", tone: "revision" };
+  if (c.includes("drone") || c.includes("aerial")) return { label: "Drone", tone: "qc_complete" };
+  if (department === "AI" || c.includes("ai ")) return { label: "AI", tone: "qc" };
+  if (department === "SVV" || c.includes("svv")) return { label: "SVV", tone: "editing" };
+  if (department === "Ongoing") return { label: "Ongoing", tone: "client" };
+  return { label: "VE", tone: "ready" };
 }
