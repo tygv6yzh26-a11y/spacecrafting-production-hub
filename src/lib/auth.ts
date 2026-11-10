@@ -4,23 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 export type Role = "admin" | "producer" | "editor";
 export type Me = { id: string; email: string; name: string; roles: Role[] };
 
-async function fetchMe(): Promise<Me | null> {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) return null;
-  const { data: roles, error } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
-  if (error) throw error;
-  return {
-    id: u.user.id,
-    email: u.user.email ?? "",
-    name: (u.user.user_metadata?.['full_name'] as string) ?? u.user.email ?? "",
-    roles: roles.map((r) => r.role as Role),
-  };
-}
-
-export const meQuery = queryOptions({ queryKey: ["me"], queryFn: fetchMe });
-
-export const canManage = (me: Me | null | undefined) => !!me?.roles.some((r) => r === "admin" || r === "producer");
-export const isAdmin = (me: Me | null | undefined) => !!me?.roles.includes("admin");
 export const defaultAdmin: Me = {
   id: "admin",
   email: "corey@imelevate.com",
@@ -30,7 +13,7 @@ export const defaultAdmin: Me = {
 
 async function fetchMe(): Promise<Me> {
   const { data: u } = await supabase.auth.getUser();
-  if (!u.user) return defaultAdmin; // <--- Automatically use your admin role
+  if (!u.user) return defaultAdmin;
   
   const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
   return {
@@ -40,3 +23,8 @@ async function fetchMe(): Promise<Me> {
     roles: roles?.length ? roles.map((r) => r.role as Role) : ["admin"],
   };
 }
+
+export const meQuery = queryOptions({ queryKey: ["me"], queryFn: fetchMe });
+
+export const canManage = (me: Me | null | undefined) => !!me?.roles.some((r) => r === "admin" || r === "producer");
+export const isAdmin = (me: Me | null | undefined) => !!me?.roles.includes("admin");
