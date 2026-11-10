@@ -17,7 +17,7 @@ import { BatchBar, CategoryChip, DeadlineShifter, PipelineBattery, StatusTile } 
 import { cn } from "@/lib/utils";
 import { editorsQuery, formatDate, jobsQuery, todayISO, useDeleteJob, useUpdateJob, type Job } from "@/lib/jobs";
 import { meQuery, canManage } from "@/lib/auth";
-import { DEPARTMENTS, departmentLabel, stageOf, statusOptions, timingOf, STAGE_META, PRESETS, BOARD_GROUPS, STAGE_META as _SM, recentShootDates, countdownLabel, nextActions, urgencyRank, type Stage, type PresetKey } from "@/lib/workflow";
+import { DEPARTMENTS, departmentLabel, stageOf, statusOptions, timingOf, STAGE_META, PRESETS, BOARD_GROUPS, recentShootDates, countdownLabel, nextActions, urgencyRank, type Stage, type PresetKey } from "@/lib/workflow";
 
 type SortKey = "due_date" | "shoot_date" | "editor" | "status" | "client" | "category" | "department";
 type QuickAction = { label: string; status: string };
@@ -311,8 +311,6 @@ export function JobsView({
                   )}
               {!collapsed.has(g.key) && g.rows.map((j) => {
                 const timing = timingOf(j, today);
-                const opts = statusOptions(j.department);
-                const statusList = opts.includes(j.status) ? opts : [...opts, j.status];
                 const editorList = j.editor && !editorNames.includes(j.editor) ? [...editorNames, j.editor] : editorNames;
                 return (
                   <tr key={j.id} className={cn("border-b align-top last:border-0 hover:bg-muted/40", timing === "overdue" && "bg-overdue-soft hover:bg-overdue-soft", selected.has(j.id) && "bg-primary/5")}>
