@@ -31,6 +31,11 @@ function Layout() {
   const qc = useQueryClient();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    autoPromoteAdmin();
+  }, []);
+
+
   if (!me) return null;
   if (me.roles.length === 0) {
     return (
