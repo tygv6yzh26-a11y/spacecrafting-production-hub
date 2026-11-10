@@ -207,3 +207,35 @@
   background-color: var(--stage-canceled);
   color: var(--stage-canceled-fg);
 }
+
+/* Monday-style solid status tiles (same in light & dark) */
+:root {
+  --tile-fg: oklch(0.99 0 0);
+  --tile-shoot: oklch(0.62 0.02 260);
+  --tile-ready: oklch(0.6 0.16 245);
+  --tile-editing: oklch(0.72 0.16 65);
+  --tile-client: oklch(0.68 0.14 85);
+  --tile-qc: oklch(0.56 0.2 295);
+  --tile-qcdone: oklch(0.6 0.11 200);
+  --tile-revision: oklch(0.6 0.21 15);
+  --tile-delivered: oklch(0.63 0.16 155);
+  --tile-canceled: oklch(0.7 0.01 260);
+}
+@utility tile-shoot { background-color: var(--tile-shoot); color: var(--tile-fg); }
+@utility tile-ready { background-color: var(--tile-ready); color: var(--tile-fg); }
+@utility tile-editing { background-color: var(--tile-editing); color: var(--tile-fg); }
+@utility tile-client { background-color: var(--tile-client); color: var(--tile-fg); }
+@utility tile-qc { background-color: var(--tile-qc); color: var(--tile-fg); }
+@utility tile-qcdone { background-color: var(--tile-qcdone); color: var(--tile-fg); }
+@utility tile-revision { background-color: var(--tile-revision); color: var(--tile-fg); }
+@utility tile-delivered { background-color: var(--tile-delivered); color: var(--tile-fg); }
+@utility tile-canceled { background-color: var(--tile-canceled); color: var(--tile-fg); }
+@utility accent-shoot { border-color: var(--tile-shoot); color: var(--tile-shoot); }
+@utility accent-ready { border-color: var(--tile-ready); color: var(--tile-ready); }
+@utility accent-editing { border-color: var(--tile-editing); color: var(--tile-editing); }
+@utility accent-client { border-color: var(--tile-client); color: var(--tile-client); }
+@utility accent-qc { border-color: var(--tile-qc); color: var(--tile-qc); }
+@utility accent-qcdone { border-color: var(--tile-qcdone); color: var(--tile-qcdone); }
+@utility accent-revision { border-color: var(--tile-revision); color: var(--tile-revision); }
+@utility accent-delivered { border-color: var(--tile-delivered); color: var(--tile-delivered); }
+@utility accent-canceled { border-color: var(--tile-canceled); color: var(--tile-canceled); }
