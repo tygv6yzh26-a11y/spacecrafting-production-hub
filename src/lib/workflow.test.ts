@@ -82,3 +82,9 @@ describe("capacityLevel", () => {
   it("3 is balanced", () => expect(capacityLevel(3)).toBe("balanced"));
   it("5 is heavy", () => expect(capacityLevel(5)).toBe("heavy"));
 });
+
+import { cutoffCountdown as _cc } from "./workflow";
+describe("5 PM delivery cutoff", () => {
+  it("counts down to 5 PM", () => { expect(_cc(new Date(2026, 10, 10, 12, 38))).toBe("4h 22m"); });
+  it("is null after 5 PM", () => { expect(_cc(new Date(2026, 10, 10, 17, 1))).toBeNull(); });
+});
