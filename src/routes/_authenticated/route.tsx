@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { meQuery } from "@/lib/auth";
+import { createServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
