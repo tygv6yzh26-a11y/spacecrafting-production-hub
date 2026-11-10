@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EditorSelect, JobLinks, NextActionButtons, RushBadge } from "@/components/job-controls";
+import { CategoryChip, CutoffClock, PipelineBattery, StatusTile } from "@/components/board-widgets";
 import { JobDialog } from "@/components/job-dialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -44,6 +45,7 @@ function JobRow({ j, onOpen, showShoot }: { j: Job; onOpen: (j: Job) => void; sh
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 font-medium">
           <RushBadge job={j} />
+          <CategoryChip job={j} />
           <span className="truncate">{j.address ?? j.project_name ?? "Untitled"}</span>
           {!j.editor && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Unassigned</span>}
           {j.notes && (
@@ -60,7 +62,7 @@ function JobRow({ j, onOpen, showShoot }: { j: Job; onOpen: (j: Job) => void; sh
           {showShoot && j.photographer && <> · Shot by {j.photographer}</>}
         </div>
       </div>
-      <StatusBadge status={j.status} className="hidden max-w-[170px] md:inline-flex" />
+      <StatusTile job={j} className="hidden w-[170px] md:flex" />
       <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">{formatDate(showShoot ? j.shoot_date : j.due_date)}</span>
       <div className="flex w-full items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
         <JobLinks job={j} />
@@ -162,7 +164,10 @@ function Dashboard() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{dayLabel}</p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">{greeting()}, Corey</h1>
           </div>
-          <Button variant="outline" size="sm" onClick={copyBriefing}><ClipboardCopy className="h-4 w-4" /> Copy morning briefing</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <CutoffClock />
+            <Button variant="outline" size="sm" onClick={copyBriefing}><ClipboardCopy className="h-4 w-4" /> Copy morning briefing</Button>
+          </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2 text-xs">
           <span className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">{d.recent.length} {isMonday ? "weekend" : "yesterday"} shoots</span>
@@ -171,6 +176,12 @@ function Dashboard() {
           <span className={cn("flex items-center gap-1 rounded-full px-3 py-1 font-medium", d.unassigned ? "bg-amber-100 text-amber-700" : "bg-muted")}>
             <UserX className="h-3 w-3" /> {d.unassigned} unassigned
           </span>
+        </div>
+        <div className="mt-4 border-t pt-4">
+          <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <span>Active pipeline</span><span>{d.active.length} jobs</span>
+          </div>
+          <PipelineBattery jobs={d.active} />
         </div>
       </div>
 
