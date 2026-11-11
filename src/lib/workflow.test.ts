@@ -85,6 +85,7 @@ describe("capacityLevel", () => {
 
 import { cutoffCountdown as _cc } from "./workflow";
 describe("5 PM delivery cutoff", () => {
-  it("counts down to 5 PM", () => { expect(_cc(new Date(2026, 10, 10, 12, 38))).toBe("4h 22m"); });
-  it("is null after 5 PM", () => { expect(_cc(new Date(2026, 10, 10, 17, 1))).toBeNull(); });
+  it("counts down to 5 PM", () => { expect(_cc(new Date("2026-11-10T18:38:00Z"))).toBe("4h 22m"); });
+  it("uses Central time, not UTC", () => { expect(_cc(new Date("2026-11-10T20:00:00Z"))).toBe("3h 0m"); });
+  it("is null after 5 PM", () => { expect(_cc(new Date("2026-11-10T23:01:00Z"))).toBeNull(); });
 });

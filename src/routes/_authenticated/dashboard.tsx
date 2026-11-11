@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CalendarCheck, CheckCheck, ClipboardCopy, Clock, Camera, Film, RotateCcw, Upload, StickyNote, UserX } from "lucide-react";
 import { jobsQuery, todayISO, formatDate, type Job } from "@/lib/jobs";
-import { buildBriefing, capacityLevel, departmentLabel, isClosed, recentShootDates, stageOf, timingOf, type CapacityLevel } from "@/lib/workflow";
+import { centralMinutes, buildBriefing, capacityLevel, departmentLabel, isClosed, recentShootDates, stageOf, timingOf, type CapacityLevel } from "@/lib/workflow";
 import { StatusBadge, TimingBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ const CAP_META: Record<CapacityLevel, { label: string; bar: string; text: string
 };
 
 function greeting() {
-  const h = new Date().getHours();
+  const h = Math.floor(centralMinutes(new Date()) / 60);
   return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 

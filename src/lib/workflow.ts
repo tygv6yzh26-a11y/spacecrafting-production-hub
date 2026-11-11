@@ -293,10 +293,18 @@ export function stageBreakdown(jobs: { status: string | null }[]): { stage: Stag
 export const DELIVERY_CUTOFF_HOUR = 17;
 
 /** "4h 22m until 5 PM cutoff" style label; null once the cutoff has passed. */
-export function cutoffCountdown(now: Date, hour = DELIVERY_CUTOFF_HOUR): string | null {
-  const cut = new Date(now);
-  cut.setHours(hour, 0, 0, 0);
-  const mins = Math.floor((cut.getTime() - now.getTime()) / 60000);
+export const BUSINESS_TZ = "America/Chicago";
+
+/** Minutes since midnight in the business (Central) timezone. */
+export function centralMinutes(now: Date, tz = BUSINESS_TZ): number {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const m = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+  return h * 60 + m;
+}
+
+export function cutoffCountdown(now: Date, hour = DELIVERY_CUTOFF_HOUR, tz = BUSINESS_TZ): string | null {
+  const mins = hour * 60 - centralMinutes(now, tz);
   if (mins <= 0) return null;
   const h = Math.floor(mins / 60);
   return h ? `${h}h ${mins % 60}m` : `${mins}m`;

@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, LayoutList, Columns3, Rows3, Rows4, Table2, ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, LayoutList, Columns3, Rows3, Rows4, Table2, ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, MoreHorizontal, SlidersHorizontal, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +10,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { StatusBadge, TimingBadge } from "@/components/status-badge";
 import { JobDialog } from "@/components/job-dialog";
 import { EditorSelect, JobLinks, NotesCell, RushBadge } from "@/components/job-controls";
@@ -69,7 +70,7 @@ export function JobsView({
   const [toDelete, setToDelete] = useState<Job | null>(null);
   const [preset, setPreset] = useState<PresetKey>("active");
   const [timingPill, setTimingPill] = useState<"overdue" | "due_today" | null>(null);
-  const [urgentFirst, setUrgentFirst] = useState(cockpit);
+  const [urgentFirst, setUrgentFirst] = useState(false);
   const [view, setView] = useState<"groups" | "table" | "board">(cockpit ? "groups" : "table");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(["delivered", "canceled"]));
@@ -190,8 +191,7 @@ export function JobsView({
 
       {cockpit && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            <Pill label="Overdue" value={counts.overdue} tone="overdue" active={timingPill === "overdue"} onClick={() => { setPreset("active"); setTimingPill(timingPill === "overdue" ? null : "overdue"); setPage(0); }} />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             <Pill label="Due today" value={counts.due_today} tone="warn" active={timingPill === "due_today"} onClick={() => { setPreset("active"); setTimingPill(timingPill === "due_today" ? null : "due_today"); setPage(0); }} />
             {(["footage", "editing", "qc", "revision"] as const).map((k) => (
               <Pill key={k} label={PRESETS.find((p) => p.key === k)!.label} value={counts.byPreset[k]} active={preset === k && !timingPill} onClick={() => { setPreset(preset === k ? "active" : k); setTimingPill(null); setPage(0); }} />
@@ -238,14 +238,21 @@ export function JobsView({
           <FilterSelect value={status} onChange={setStatus} placeholder="All statuses" options={statuses.map((s) => ({ value: s, label: s }))} />
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-3 py-2 text-xs text-muted-foreground">
-          <DateRange label="Shoot" from={shootFrom} to={shootTo} setFrom={setShootFrom} setTo={setShootTo} />
-          <DateRange label="Deadline" from={dueFrom} to={dueTo} setFrom={setDueFrom} setTo={setDueTo} />
-          <label className="flex items-center gap-1.5">
-            <Checkbox checked={overdueOnly} onCheckedChange={(v) => { setOverdueOnly(!!v); setPage(0); }} /> Overdue only
-          </label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 gap-1 rounded-full text-xs"><SlidersHorizontal className="h-3.5 w-3.5" /> Dates & more{[shootFrom, shootTo, dueFrom, dueTo].filter(Boolean).length + (overdueOnly ? 1 : 0) > 0 && <span className="rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{[shootFrom, shootTo, dueFrom, dueTo].filter(Boolean).length + (overdueOnly ? 1 : 0)}</span>}</Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto space-y-3 text-xs text-muted-foreground">
+              <DateRange label="Shoot" from={shootFrom} to={shootTo} setFrom={setShootFrom} setTo={setShootTo} />
+              <DateRange label="Deadline" from={dueFrom} to={dueTo} setFrom={setDueFrom} setTo={setDueTo} />
+              <label className="flex items-center gap-1.5">
+                <Checkbox checked={overdueOnly} onCheckedChange={(v) => { setOverdueOnly(!!v); setPage(0); }} /> Show overdue only
+              </label>
+            </PopoverContent>
+          </Popover>
           {cockpit && (
             <label className="flex items-center gap-1.5">
-              <Checkbox checked={urgentFirst} onCheckedChange={(v) => { setUrgentFirst(!!v); setPage(0); }} /> Pin overdue & due today on top
+              <Checkbox checked={urgentFirst} onCheckedChange={(v) => { setUrgentFirst(!!v); setPage(0); }} /> Pin due today on top
             </label>
           )}
           {!cockpit && <label className="flex items-center gap-1.5">
@@ -313,14 +320,14 @@ export function JobsView({
                 const timing = timingOf(j, today);
                 const editorList = j.editor && !editorNames.includes(j.editor) ? [...editorNames, j.editor] : editorNames;
                 return (
-                  <tr key={j.id} className={cn("border-b align-top last:border-0 hover:bg-muted/40", timing === "overdue" && "bg-overdue-soft hover:bg-overdue-soft", selected.has(j.id) && "bg-primary/5")}>
+                  <tr key={j.id} className={cn("border-b align-top last:border-0 hover:bg-muted/40", selected.has(j.id) && "bg-primary/5")}>
                     <td className={cn("px-3 py-2.5", g.key !== "all" && "border-l-4", g.accent)}><Checkbox aria-label="Select job" checked={selected.has(j.id)} onCheckedChange={() => toggleSel(j.id)} /></td>
-                    <td className={cn("whitespace-nowrap px-3 py-2", timing === "overdue" && "border-l-2 border-l-overdue")}>
-                      <div className={cn("flex items-center gap-1 font-medium", timing === "overdue" && "text-overdue")}>{formatDeadline(j.due_date)}<DeadlineShifter job={j} /></div>
+                    <td className="whitespace-nowrap px-3 py-2">
+                      <div className="flex items-center gap-1 font-medium">{formatDeadline(j.due_date)}<DeadlineShifter job={j} /></div>
                       <div className="flex items-center gap-1.5">
                         <TimingBadge timing={timing} />
                         <RushBadge job={j} />
-                        {countdownLabel(j, today) && <span className={cn("text-[11px]", timing === "overdue" ? "font-semibold text-overdue" : "text-muted-foreground")}>{countdownLabel(j, today)}</span>}
+                        {countdownLabel(j, today) && <span className={cn("text-[11px]", "text-muted-foreground")}>{countdownLabel(j, today)}</span>}
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
